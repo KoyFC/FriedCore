@@ -55,6 +55,10 @@ It also writes the formats a console's packaging reads and the `stb` writers do 
 
 The web has no icon. `Icon::render` gives the files ready to write, a preview of how the platform shows the icon, and notes that say what the source had to become, such as being cut to a square or approximated to fewer colors.
 
+## Asset checks
+
+`asset_check.h` checks a project's `assets/` folder against what a platform can hold: a texture over 1024 pixels on the 3DS and DS, one that alone overflows the DS's texture memory, audio the DS cannot play or the fx-CG50 has no use for, and assets that outgrow the fx-CG50's storage. Each issue says how serious it is and, when the library can put it right, what the fix is: `applyFix` shrinks an image or mixes a WAV down to mono, after keeping the file as it was under a backup folder the tool names. Assets are named the way a scene file names them, `game/sprite.png`.
+
 ## Finding the engine
 
 `engine_location.h` finds the engine a project builds with: its `engine/` submodule, or the folder above the project, which is where the engine's own sandbox sits. An engine is the folder that has `cmake/FriedEngine.cmake`.
