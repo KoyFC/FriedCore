@@ -16,7 +16,10 @@ fried_core_check_is_ui_free(
 add_library(fried_core STATIC
     src/build.cpp
     src/engine_location.cpp
+    src/icon.cpp
+    src/image.cpp
     src/project.cpp
+    src/stb.cpp
     src/step_runner.cpp
     src/toolchains.cpp
 )

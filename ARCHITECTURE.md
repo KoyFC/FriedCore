@@ -34,6 +34,25 @@ On Windows the PC build uses Visual Studio's CMake when there is one. Otherwise 
 
 `step_runner.h` runs a list of programs one after another on top of that. A tool calls `pump` from its own loop and reads `lines`: each line of output with what it is (`kindOf` knows the errors, warnings and progress lines that haxe, CMake and the compilers print), preceded by the command that printed it. A step that fails stops the run, and `cancel` stops it at once.
 
+## Images and icons
+
+`image.h` is the image work a tool needs, on plain truecolor pixels: reading a PNG, JPEG or BMP, cutting the middle out of an image, scaling it, flattening it onto a color, and cutting its colors down to a palette. Scaling down averages the area each new pixel covers and scaling up interpolates, both weighted by alpha so a transparent edge does not bleed its color. The palette is a median cut, and an image that already has few enough colors keeps each of them. A photograph stored rotated is read as stored, since its orientation tag is not read.
+
+It also writes the formats a console's packaging reads and the `stb` writers do not have: a PNG of one byte a pixel with a palette, and a BMP of sixteen colors. `writeFiles` writes several files or none: each is written beside its place and they are all moved into place only once every one was written.
+
+`icon.h` turns one source image into each platform's icon, in the place that platform's build looks for it:
+
+| Platform | File | What it is |
+|---|---|---|
+| PC | `assets/icon.png` | Square, truecolor, 512 pixels at most |
+| Vita | `sce_sys/icon0.png` | 128x128 PNG with a palette of up to 256 colors, as the Vita's installer rejects a truecolor one |
+| Switch | `switch/icon.jpg` | 256x256 JPEG, on black |
+| 3DS | `3ds/icon.png` | 48x48 PNG, on black |
+| DS | `nds/icon.bmp` | 32x32 BMP of sixteen colors, the first of them transparent |
+| fx-CG50 | `cg50/icon-uns.png` and `cg50/icon-sel.png` | 92x64 PNGs of the same art inside a round frame, white unselected and blue selected |
+
+The web has no icon. `Icon::render` gives the files ready to write, a preview of how the platform shows the icon, and notes that say what the source had to become, such as being cut to a square or approximated to fewer colors.
+
 ## Finding the engine
 
 `engine_location.h` finds the engine a project builds with: its `engine/` submodule, or the folder above the project, which is where the engine's own sandbox sits. An engine is the folder that has `cmake/FriedEngine.cmake`.

@@ -3,6 +3,7 @@ add_executable(fried_core_tests
     build_target_test.cpp
     build_test.cpp
     engine_location_test.cpp
+    icon_test.cpp
     project_test.cpp
     step_runner_test.cpp
 )
