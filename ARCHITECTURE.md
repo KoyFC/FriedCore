@@ -32,7 +32,9 @@ On Windows the PC build uses Visual Studio's CMake when there is one. Otherwise 
 
 `process.h` starts a program without blocking the tool. Its output goes to a log file, or is kept for the tool to read as it arrives. The program leads a process group of its own, so stopping it also stops what it started, such as the compilers under a CMake build, and a program that ignores being asked is killed when the object that holds it goes away. It is written for POSIX systems only: the Project Manager runs its builds through Qt, and no other tool runs on Windows yet.
 
-`step_runner.h` runs a list of programs one after another on top of that. A tool calls `pump` from its own loop and reads `lines`: each line of output with what it is (`kindOf` knows the errors, warnings and progress lines that haxe, CMake and the compilers print), preceded by the command that printed it. A step that fails stops the run, and `cancel` stops it at once.
+`line_kind.h` says what a line of a build's output is: `kindOf` knows the errors, warnings and progress lines that haxe, CMake and the compilers print. It has no system calls in it, so a tool that runs its own programs, as the Project Manager does, uses it too.
+
+`step_runner.h` runs a list of programs one after another on top of `process.h`. A tool calls `pump` from its own loop and reads `lines`: each line of output with what it is, preceded by the command that printed it. A step that fails stops the run, and `cancel` stops it at once.
 
 ## Images and icons
 

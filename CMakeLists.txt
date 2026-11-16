@@ -18,14 +18,14 @@ add_library(fried_core STATIC
     src/engine_location.cpp
     src/icon.cpp
     src/image.cpp
+    src/line_kind.cpp
     src/project.cpp
     src/stb.cpp
-    src/step_runner.cpp
     src/toolchains.cpp
 )
 
 if(UNIX)
-    target_sources(fried_core PRIVATE src/posix/subprocess.cpp)
+    target_sources(fried_core PRIVATE src/posix/subprocess.cpp src/step_runner.cpp)
 endif()
 target_include_directories(fried_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
