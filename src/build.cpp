@@ -1,6 +1,7 @@
 #include "fried/core/build.h"
 
 #include "fried/core/engine_location.h"
+#include "paths.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -39,7 +40,7 @@ namespace fried::core
         bool exists(const std::string &path)
         {
             std::error_code ignored;
-            return fs::exists(path, ignored);
+            return fs::exists(pathOf(path), ignored);
         }
 
         std::string joined(const std::string &directory, const std::string &relative)
@@ -85,9 +86,7 @@ namespace fried::core
                 return std::string();
             }
 
-            std::string file = (fs::path(toolchains.m_fxsdk).parent_path() / ".." / "lib" / "cmake" / "fxsdk" / "FXCG50.cmake")
-                                   .lexically_normal()
-                                   .generic_string();
+            std::string file = textOf((pathOf(toolchains.m_fxsdk).parent_path() / ".." / "lib" / "cmake" / "fxsdk" / "FXCG50.cmake").lexically_normal());
             if (!exists(file))
             {
                 *error = native(toolchains.m_fxsdk, toolchains.m_host) + " has no fx-CG50 toolchain at " + native(file, toolchains.m_host) + ".";

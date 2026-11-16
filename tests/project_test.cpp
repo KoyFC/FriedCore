@@ -165,3 +165,20 @@ TEST_CASE("the camera area follows the platform's screen and the display mode")
     CHECK(sizes("height") == std::vector<Size>{{640, 480}, {640, 480}, {800, 480}, {847, 480}, {853, 480}, {849, 480}});
     CHECK(sizes("pixel") == std::vector<Size>{{640, 480}, {256, 192}, {400, 240}, {960, 544}, {1280, 720}, {396, 224}});
 }
+
+TEST_CASE("a project in a folder with accents loads and saves")
+{
+    TemporaryDirectory folder("proyecto-ni\xC3\xB1o");
+    std::string directory = folder.path();
+    folder.write("project.fried", "{\"name\": \"Game\"}\n");
+
+    fried::core::Project project;
+    std::string error;
+    REQUIRE(project.load(directory, &error));
+    project.setVersion("01.00");
+    REQUIRE(project.save(&error));
+
+    fried::core::Project again;
+    REQUIRE(again.load(directory, &error));
+    CHECK(again.version() == "01.00");
+}

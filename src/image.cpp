@@ -1,4 +1,5 @@
 #include "fried/core/image.h"
+#include "paths.h"
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
@@ -19,6 +20,20 @@ namespace fried::core
     namespace
     {
         namespace fs = std::filesystem;
+
+        // Read whole, so a path in UTF-8 opens the same on every system, which the stb loaders' own file functions do not.
+        bool readFile(const std::string &file, std::string *bytes)
+        {
+            std::ifstream stream(pathOf(file), std::ios::binary);
+            if (!stream)
+            {
+                return false;
+            }
+            std::ostringstream content;
+            content << stream.rdbuf();
+            *bytes = content.str();
+            return true;
+        }
 
         constexpr int s_jpegQuality = 92;
         constexpr int s_compression = 8;
@@ -299,19 +314,28 @@ namespace fried::core
 
     bool imageSize(const std::string &file, int *width, int *height)
     {
+        std::string bytes;
+        if (!readFile(file, &bytes))
+        {
+            return false;
+        }
         int channels = 0;
-        return stbi_info(file.c_str(), width, height, &channels) != 0;
+        return stbi_info_from_memory(reinterpret_cast<const unsigned char *>(bytes.data()), static_cast<int>(bytes.size()), width, height, &channels) != 0;
     }
 
     Image readImage(const std::string &file, std::string *error)
     {
-        int width = 0, height = 0, channels = 0;
-        unsigned char *pixels = stbi_load(file.c_str(), &width, &height, &channels, 4);
-        Image image = fromStb(pixels, width, height, channels);
+        std::string bytes;
+        if (!readFile(file, &bytes))
+        {
+            *error = textOf(pathOf(file).filename()) + " could not be read.";
+            return Image();
+        }
+        Image image = decodeImage(bytes);
         if (image.isNull())
         {
             const char *reason = stbi_failure_reason();
-            *error = fs::path(file).filename().string() + " could not be read as an image: " + (reason != nullptr ? reason : "unknown format") + ".";
+            *error = textOf(pathOf(file).filename()) + " could not be read as an image: " + (reason != nullptr ? reason : "unknown format") + ".";
         }
         return image;
     }
@@ -607,7 +631,7 @@ namespace fried::core
 
     bool writeImage(const std::string &file, const Image &image)
     {
-        std::ofstream stream(file, std::ios::binary | std::ios::trunc);
+        std::ofstream stream(pathOf(file), std::ios::binary | std::ios::trunc);
         stream << (isJpeg(file) ? encodeJpeg(image) : encodePng(image));
         stream.flush();
         return static_cast<bool>(stream);
@@ -646,7 +670,7 @@ namespace fried::core
 
         for (const EncodedFile &file : files)
         {
-            fs::path target = fs::path(directory) / file.m_path;
+            fs::path target = pathOf(directory) / pathOf(file.m_path);
             fs::path temporary = target;
             temporary += ".tmp";
 
@@ -654,7 +678,7 @@ namespace fried::core
             fs::create_directories(target.parent_path(), failure);
             if (failure)
             {
-                *error = "Could not create the directory for " + target.string() + ".";
+                *error = "Could not create the directory for " + textOf(target) + ".";
                 discard();
                 return false;
             }
@@ -665,7 +689,7 @@ namespace fried::core
             stream.flush();
             if (!stream)
             {
-                *error = "Could not write " + target.string() + ".";
+                *error = "Could not write " + textOf(target) + ".";
                 discard();
                 return false;
             }
@@ -677,7 +701,7 @@ namespace fried::core
             fs::rename(temporary, target, failure);
             if (failure)
             {
-                *error = "Could not write " + target.string() + ": " + failure.message();
+                *error = "Could not write " + textOf(target) + ": " + failure.message();
                 discard();
                 return false;
             }

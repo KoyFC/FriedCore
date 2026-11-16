@@ -1,4 +1,5 @@
 #include "fried/core/project.h"
+#include "paths.h"
 
 #include <algorithm>
 #include <cctype>
@@ -136,7 +137,7 @@ namespace fried::core
     bool Project::exists(const std::string &directory)
     {
         std::error_code ignored;
-        return fs::exists(fs::path(directory) / s_fileName, ignored);
+        return fs::exists(pathOf(directory) / s_fileName, ignored);
     }
 
     bool Project::load(const std::string &directory, std::string *error)
@@ -147,7 +148,7 @@ namespace fried::core
             return false;
         }
 
-        std::ifstream file(fs::path(directory) / s_fileName, std::ios::binary);
+        std::ifstream file(pathOf(directory) / s_fileName, std::ios::binary);
         if (!file)
         {
             *error = "Could not read " + directory + "/" + s_fileName + ".";
@@ -190,7 +191,7 @@ namespace fried::core
     // Written beside the file and moved over it, so a failed write leaves the project as it was.
     bool Project::save(std::string *error) const
     {
-        fs::path target = filePath();
+        fs::path target = pathOf(filePath());
         fs::path staged = target;
         staged += ".tmp";
 
@@ -200,7 +201,7 @@ namespace fried::core
             file.flush();
             if (!file)
             {
-                *error = "Could not write " + target.string() + ".";
+                *error = "Could not write " + textOf(target) + ".";
                 std::error_code ignored;
                 fs::remove(staged, ignored);
                 return false;
@@ -211,7 +212,7 @@ namespace fried::core
         fs::rename(staged, target, failure);
         if (failure)
         {
-            *error = "Could not write " + target.string() + ": " + failure.message();
+            *error = "Could not write " + textOf(target) + ": " + failure.message();
             std::error_code ignored;
             fs::remove(staged, ignored);
             return false;

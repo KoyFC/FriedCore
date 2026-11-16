@@ -1,4 +1,5 @@
 #include "fried/core/toolchains.h"
+#include "paths.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -51,7 +52,7 @@ namespace fried::core
         {
             for (const char *tool : tools)
             {
-                if (!isFile(fs::path(directory) / "bin" / (std::string(tool) + ".exe")))
+                if (!isFile(pathOf(directory) / "bin" / (std::string(tool) + ".exe")))
                 {
                     return false;
                 }
@@ -70,20 +71,20 @@ namespace fried::core
             base = variable("LOCALAPPDATA");
             break;
         case HostSystem::MacOs:
-            base = fs::path(homeDirectory()) / "Library" / "Application Support";
+            base = pathOf(homeDirectory()) / "Library" / "Application Support";
             break;
         default:
         {
             std::string data = variable("XDG_DATA_HOME");
-            base = data.empty() ? fs::path(homeDirectory()) / ".local" / "share" : fs::path(data);
+            base = data.empty() ? pathOf(homeDirectory()) / ".local" / "share" : pathOf(data);
         }
         }
-        return (base / s_organization / s_manager / "tools").generic_string();
+        return textOf(base / s_organization / s_manager / "tools");
     }
 
     std::string emscriptenToolchainFile(const std::string &sdkDirectory)
     {
-        return (fs::path(sdkDirectory) / "upstream" / "emscripten" / "cmake" / "Modules" / "Platform" / "Emscripten.cmake").generic_string();
+        return textOf(pathOf(sdkDirectory) / "upstream" / "emscripten" / "cmake" / "Modules" / "Platform" / "Emscripten.cmake");
     }
 
     std::string findExecutable(const std::string &name)
@@ -103,10 +104,10 @@ namespace fried::core
         {
             for (const std::string &extension : extensions)
             {
-                fs::path candidate = fs::path(directory) / (name + extension);
+                fs::path candidate = pathOf(directory) / (name + extension);
                 if (isFile(candidate))
                 {
-                    return candidate.string();
+                    return textOf(candidate);
                 }
             }
         }
@@ -125,9 +126,9 @@ namespace fried::core
         // Each candidate has to hold the toolchain file, so a half-finished install is skipped.
         std::string home = homeDirectory();
         for (const std::string &candidate :
-             {variable("EMSDK"), managed.m_emscriptenSdk, home.empty() ? std::string() : (fs::path(home) / "emsdk").generic_string()})
+             {variable("EMSDK"), managed.m_emscriptenSdk, home.empty() ? std::string() : textOf(pathOf(home) / "emsdk")})
         {
-            if (!candidate.empty() && isFile(emscriptenToolchainFile(candidate)))
+            if (!candidate.empty() && isFile(pathOf(emscriptenToolchainFile(candidate))))
             {
                 toolchains.m_emscriptenSdk = candidate;
                 break;
