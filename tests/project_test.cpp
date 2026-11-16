@@ -1,0 +1,167 @@
+#include "doctest/doctest.h"
+
+#include "fried/core/project.h"
+#include "temporary_directory.h"
+
+#include <vector>
+
+using namespace fried::core;
+
+namespace
+{
+    const std::string s_data = FRIED_CORE_TEST_DATA;
+
+    Project parsed(const std::string &text)
+    {
+        Project project;
+        std::string error;
+        REQUIRE(project.parse("/games/sample", text, &error));
+        return project;
+    }
+}
+
+TEST_CASE("a project file gives its identity and one display for every platform")
+{
+    Project project = parsed(R"({
+        "name": "Sample",
+        "organization": "Org",
+        "version": "01.00",
+        "window": {"title": "Sample!"},
+        "startScene": "main",
+        "display": {"mode": "pixel", "width": 640, "height": 480, "filter": "linear"},
+        "vita": {"titleId": "SAMP00001"},
+        "3ds": {"description": "A sample"},
+        "nds": {"display": {"mode": "default"}}
+    })");
+
+    CHECK(project.name() == "Sample");
+    CHECK(project.organization() == "Org");
+    CHECK(project.version() == "01.00");
+    CHECK(project.windowTitle() == "Sample!");
+    CHECK(project.startScene() == "main");
+    CHECK(project.vitaTitleId() == "SAMP00001");
+    CHECK(project.packagingText("3ds", "description") == "A sample");
+    CHECK(project.packagingText("nds", "subtitle1").empty());
+    CHECK(project.scenesDirectory() == "/games/sample/assets/scenes");
+    CHECK(project.display() == DisplaySettings{"pixel", 640, 480, "linear"});
+}
+
+TEST_CASE("a project with no display uses the default mode, as the engine's build reads it")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.display().m_mode == "default");
+    CHECK(project.display().m_filter == "nearest");
+    CHECK(project.display().m_width == 0);
+}
+
+TEST_CASE("a file that is not a project is refused with a reason")
+{
+    Project project;
+    std::string error;
+    CHECK_FALSE(project.parse("/games/sample", "[1, 2]", &error));
+    CHECK(error == "project.fried must hold a JSON object.");
+    CHECK_FALSE(project.parse("/games/sample", "{\"name\": ", &error));
+    CHECK(error.find("not valid JSON") != std::string::npos);
+    CHECK_FALSE(project.load("/nonexistent-directory", &error));
+    CHECK(error.find("not a Fried project") != std::string::npos);
+}
+
+TEST_CASE("a file the manager saved is written back byte for byte")
+{
+    std::string original = TemporaryDirectory::readFile(s_data + "/manager_saved.project.fried");
+    CHECK(parsed(original).text() == original);
+}
+
+TEST_CASE("saving keeps the keys the model does not know")
+{
+    TemporaryDirectory directory("project-save");
+    directory.write("project.fried", R"({"name": "Old", "gameClass": "Main", "switch": {"custom": 3}})");
+
+    Project project;
+    std::string error;
+    REQUIRE(project.load(directory.path(), &error));
+    project.setName("New");
+    project.setVitaTitleId("FRIE00002");
+    REQUIRE(project.save(&error));
+
+    CHECK(directory.read("project.fried") ==
+          "{\n\t\"gameClass\": \"Main\",\n\t\"name\": \"New\",\n\t\"switch\": {\n\t\t\"custom\": 3\n\t},\n\t\"vita\": {\n\t\t\"titleId\": \"FRIE00002\"\n\t}\n}\n");
+    CHECK_FALSE(std::filesystem::exists(directory.path() + "/project.fried.tmp"));
+}
+
+TEST_CASE("the template's project file keeps everything through a save")
+{
+    Project project = parsed(TemporaryDirectory::readFile(s_data + "/template.project.fried"));
+    Project again = parsed(project.text());
+    CHECK(again.name() == "@NAME@");
+    CHECK(again.windowTitle() == "@NAME@");
+    CHECK(again.startScene() == "main");
+    CHECK(again.vitaTitleId() == "@TITLE_ID@");
+    CHECK(again.display() == DisplaySettings{"expand", 960, 540, "nearest"});
+}
+
+TEST_CASE("an emptied value removes its key, and its section with the last key")
+{
+    Project project = parsed(R"({"name": "Sample", "window": {"title": "T"}, "nds": {"subtitle1": "a", "subtitle2": "b"}})");
+    project.setWindowTitle("");
+    project.setPackagingText("nds", "subtitle1", "");
+    project.setStartScene("");
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"subtitle2\": \"b\"\n\t}\n}\n");
+
+    project.setPackagingText("nds", "subtitle2", "");
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+}
+
+TEST_CASE("the display is written without a size in the default mode and left alone when unchanged")
+{
+    Project project = parsed(R"({"display": {"width": 640, "height": 480, "mode": "fit"}})");
+    std::string before = project.text();
+    project.setDisplay(DisplaySettings{"fit", 640, 480, "nearest"});
+    CHECK(project.text() == before);
+
+    project.setDisplay(DisplaySettings{"default", 640, 480, "linear"});
+    CHECK(project.text() == "{\n\t\"display\": {\n\t\t\"filter\": \"linear\",\n\t\t\"mode\": \"default\"\n\t}\n}\n");
+}
+
+TEST_CASE("a platform's own display is dropped, and its section with it when nothing else is there")
+{
+    Project project = parsed(R"({"switch": {"display": {"filter": "nearest"}}, "vita": {"display": {"filter": "nearest"}, "titleId": "FRIE00001"}})");
+    project.dropPlatformDisplays();
+    CHECK(project.text() == "{\n\t\"vita\": {\n\t\t\"titleId\": \"FRIE00001\"\n\t}\n}\n");
+}
+
+TEST_CASE("identity, version and title id are checked the way packaging needs them")
+{
+    CHECK(Project::checkIdentity("Fried Sandbox").empty());
+    CHECK_FALSE(Project::checkIdentity("").empty());
+    CHECK_FALSE(Project::checkIdentity("a/b").empty());
+    CHECK_FALSE(Project::checkIdentity("what?").empty());
+
+    CHECK(Project::checkVersion("").empty());
+    CHECK(Project::checkVersion("01.00").empty());
+    CHECK_FALSE(Project::checkVersion("1.0").empty());
+    CHECK_FALSE(Project::checkVersion("01.0a").empty());
+    CHECK_FALSE(Project::checkVersion("01.000").empty());
+
+    CHECK(Project::checkVitaTitleId("").empty());
+    CHECK(Project::checkVitaTitleId("FRIE00001").empty());
+    CHECK_FALSE(Project::checkVitaTitleId("frie00001").empty());
+    CHECK_FALSE(Project::checkVitaTitleId("FRIE0001").empty());
+    CHECK_FALSE(Project::checkVitaTitleId("FRIE0000A").empty());
+}
+
+TEST_CASE("the camera area follows the platform's screen and the display mode")
+{
+    auto sizes = [](const char *mode) {
+        Project project = parsed(std::string(R"({"display": {"mode": ")") + mode + R"(", "width": 640, "height": 480}})");
+        return std::vector<std::pair<int, int>>{project.logicalSize(Platform::Pc), project.logicalSize(Platform::NintendoDs),
+                                                project.logicalSize(Platform::Nintendo3ds), project.logicalSize(Platform::Vita),
+                                                project.logicalSize(Platform::Switch), project.logicalSize(Platform::Cg50)};
+    };
+    using Size = std::pair<int, int>;
+    CHECK(sizes("default") == std::vector<Size>{{640, 480}, {256, 192}, {400, 240}, {960, 544}, {1280, 720}, {396, 224}});
+    CHECK(sizes("fit") == std::vector<Size>(6, Size{640, 480}));
+    CHECK(sizes("expand") == std::vector<Size>{{640, 480}, {640, 480}, {800, 480}, {847, 480}, {853, 480}, {849, 480}});
+    CHECK(sizes("height") == std::vector<Size>{{640, 480}, {640, 480}, {800, 480}, {847, 480}, {853, 480}, {849, 480}});
+    CHECK(sizes("pixel") == std::vector<Size>{{640, 480}, {256, 192}, {400, 240}, {960, 544}, {1280, 720}, {396, 224}});
+}

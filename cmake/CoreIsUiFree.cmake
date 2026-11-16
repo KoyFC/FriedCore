@@ -1,0 +1,12 @@
+# The library may not include a UI toolkit's headers, so the Qt manager and the Dear ImGui editor can both link it.
+function(fried_core_check_is_ui_free)
+    foreach(_directory ${ARGN})
+        file(GLOB_RECURSE _sources ${_directory}/*.h ${_directory}/*.hpp ${_directory}/*.cpp)
+        foreach(_source ${_sources})
+            file(STRINGS ${_source} _includes REGEX "^[ \t]*#[ \t]*include[ \t]*[<\"](Q[A-Za-z]|imgui|SDL|GLFW)")
+            if(_includes)
+                message(FATAL_ERROR "${_source} includes a UI or windowing header, which nothing in FriedCore may do:\n${_includes}")
+            endif()
+        endforeach()
+    endforeach()
+endfunction()
