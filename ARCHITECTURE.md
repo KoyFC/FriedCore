@@ -28,6 +28,12 @@ The display follows `ProjectDisplay.cmake`: a project with no `display` uses the
 
 On Windows the PC build uses Visual Studio's CMake when there is one. Otherwise it uses w64devkit by the full path of each tool, with its `bin` folder put in front of the `PATH` of every step, as a tool's own `PATH` never has it. Installing w64devkit or the Emscripten SDK is the Project Manager's job and is not in this library.
 
+## Running a build
+
+`process.h` starts a program without blocking the tool. Its output goes to a log file, or is kept for the tool to read as it arrives. The program leads a process group of its own, so stopping it also stops what it started, such as the compilers under a CMake build, and a program that ignores being asked is killed when the object that holds it goes away. It is written for POSIX systems only: the Project Manager runs its builds through Qt, and no other tool runs on Windows yet.
+
+`step_runner.h` runs a list of programs one after another on top of that. A tool calls `pump` from its own loop and reads `lines`: each line of output with what it is (`kindOf` knows the errors, warnings and progress lines that haxe, CMake and the compilers print), preceded by the command that printed it. A step that fails stops the run, and `cancel` stops it at once.
+
 ## Finding the engine
 
 `engine_location.h` finds the engine a project builds with: its `engine/` submodule, or the folder above the project, which is where the engine's own sandbox sits. An engine is the folder that has `cmake/FriedEngine.cmake`.
