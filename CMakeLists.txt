@@ -14,8 +14,10 @@ fried_core_check_is_ui_free(
 )
 
 add_library(fried_core STATIC
+    src/build.cpp
     src/engine_location.cpp
     src/project.cpp
+    src/toolchains.cpp
 )
 target_include_directories(fried_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include

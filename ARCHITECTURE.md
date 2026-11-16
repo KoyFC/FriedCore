@@ -20,6 +20,14 @@ The display follows `ProjectDisplay.cmake`: a project with no `display` uses the
 
 `logicalSize` gives the size a game draws in on a platform's own screen for the project's display mode, which is the area a camera shows there.
 
+## Builds
+
+`toolchains.h` describes what a machine has to build with as plain data, a `Toolchains`: where the Vita SDK and devkitPro are, the `fxsdk` and MinGW-w64 commands, an Emscripten SDK, and on Windows the CMake that drives Visual Studio and a w64devkit. `detectToolchains` fills one from the environment, the `PATH` and the folders a tool installs toolchains of its own in. Visual Studio is the one thing it does not look for, because asking for it runs a program: a tool that supports it sets that field itself. `managerToolsDirectory` is the folder the Project Manager downloads toolchains into, so the editor finds an Emscripten SDK the manager installed.
+
+`build.h` turns a target, a build type and a `Toolchains` into the steps of a build: the Haxe compile, the CMake configure and the CMake build, each a list of arguments run in the project's folder. `Build::steps` reads nothing but its arguments and whether the toolchain files exist, so the commands of a Windows build are tested on Linux by describing a Windows machine. When a target cannot be built it returns no steps and says what is missing, and `Build::status` is that sentence, or "Ready", for a tool to show.
+
+On Windows the PC build uses Visual Studio's CMake when there is one. Otherwise it uses w64devkit by the full path of each tool, with its `bin` folder put in front of the `PATH` of every step, as a tool's own `PATH` never has it. Installing w64devkit or the Emscripten SDK is the Project Manager's job and is not in this library.
+
 ## Finding the engine
 
 `engine_location.h` finds the engine a project builds with: its `engine/` submodule, or the folder above the project, which is where the engine's own sandbox sits. An engine is the folder that has `cmake/FriedEngine.cmake`.

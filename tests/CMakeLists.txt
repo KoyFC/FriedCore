@@ -1,6 +1,7 @@
 add_executable(fried_core_tests
     main.cpp
     build_target_test.cpp
+    build_test.cpp
     engine_location_test.cpp
     project_test.cpp
 )
