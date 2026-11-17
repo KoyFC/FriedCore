@@ -182,3 +182,19 @@ TEST_CASE("a project in a folder with accents loads and saves")
     REQUIRE(again.load(directory, &error));
     CHECK(again.version() == "01.00");
 }
+
+TEST_CASE("vsync is on unless the project turns it off, and only an off is written")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.vsync());
+
+    project.setVsync(false);
+    CHECK_FALSE(project.vsync());
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"vsync\": false\n}\n");
+
+    project.setVsync(true);
+    CHECK(project.vsync());
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    CHECK(parsed(R"({"vsync": "no"})").vsync());
+}

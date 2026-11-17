@@ -317,6 +317,12 @@ namespace fried::core
         return display;
     }
 
+    bool Project::vsync() const
+    {
+        auto found = m_root.find("vsync");
+        return found == m_root.end() || !found->is_boolean() || found->get<bool>();
+    }
+
     void Project::setName(const std::string &value)
     {
         assign(m_root, "name", value);
@@ -358,6 +364,18 @@ namespace fried::core
         if (value != display())
         {
             m_root[s_displayKey] = displayObject(value);
+        }
+    }
+
+    void Project::setVsync(bool value)
+    {
+        if (value)
+        {
+            m_root.erase("vsync");
+        }
+        else
+        {
+            m_root["vsync"] = false;
         }
     }
 

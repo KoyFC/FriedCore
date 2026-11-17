@@ -71,6 +71,8 @@ namespace fried::core
         std::string packagingText(const std::string &section, const std::string &key) const;
         // The top-level "display", which every platform shares.
         DisplaySettings display() const;
+        // Whether a desktop window waits for the display's refresh, true when the project does not say. Consoles and the calculator ignore it.
+        bool vsync() const;
 
         // An empty value removes the key, which the engine reads as undeclared.
         void setName(const std::string &value);
@@ -81,6 +83,8 @@ namespace fried::core
         void setVitaTitleId(const std::string &value);
         void setPackagingText(const std::string &section, const std::string &key, const std::string &value);
         void setDisplay(const DisplaySettings &value);
+        // Only a vsync turned off is written, so the default leaves no key behind.
+        void setVsync(bool value);
         // A display of a platform's own is no longer read by the engine, which refuses to build with one.
         void dropPlatformDisplays();
 

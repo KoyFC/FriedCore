@@ -16,6 +16,8 @@ The file is written with tabs and its keys in alphabetical order, the same bytes
 
 The display follows `ProjectDisplay.cmake`: a project with no `display` uses the `default` mode, which has no size. `s_suggestedDisplay` is only what a tool proposes when a project leaves that mode. A display inside a platform's section is no longer read by the engine, which refuses to build with one, and `dropPlatformDisplays` takes them out.
 
+`vsync` is a top-level boolean that is true when the key is missing or not a boolean. Only `false` is written, so a project that never touched it keeps no key. It matters to a desktop window, and the consoles and the calculator ignore it.
+
 `checkIdentity`, `checkVersion` and `checkVitaTitleId` say what is wrong with a value, and the limits of the 3DS and DS packaging text are constants of `Project`. A tool checks a value before setting it: the setters and `save` accept anything.
 
 `logicalSize` gives the size a game draws in on a platform's own screen for the project's display mode, which is the area a camera shows there.
