@@ -198,3 +198,19 @@ TEST_CASE("vsync is on unless the project turns it off, and only an off is writt
 
     CHECK(parsed(R"({"vsync": "no"})").vsync());
 }
+
+TEST_CASE("the default target framerate is no limit unless the project gives one")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.defaultTargetFramerate() == 0);
+
+    project.setDefaultTargetFramerate(144);
+    CHECK(project.defaultTargetFramerate() == 144);
+    CHECK(project.text() == "{\n\t\"defaultTargetFramerate\": 144,\n\t\"name\": \"Sample\"\n}\n");
+
+    project.setDefaultTargetFramerate(0);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    CHECK(parsed(R"({"defaultTargetFramerate": -5})").defaultTargetFramerate() == 0);
+    CHECK(parsed(R"({"defaultTargetFramerate": "fast"})").defaultTargetFramerate() == 0);
+}

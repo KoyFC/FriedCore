@@ -323,6 +323,12 @@ namespace fried::core
         return found == m_root.end() || !found->is_boolean() || found->get<bool>();
     }
 
+    int Project::defaultTargetFramerate() const
+    {
+        auto found = m_root.find("defaultTargetFramerate");
+        return found != m_root.end() && found->is_number_integer() ? std::max(0, found->get<int>()) : 0;
+    }
+
     void Project::setName(const std::string &value)
     {
         assign(m_root, "name", value);
@@ -376,6 +382,18 @@ namespace fried::core
         else
         {
             m_root["vsync"] = false;
+        }
+    }
+
+    void Project::setDefaultTargetFramerate(int value)
+    {
+        if (value > 0)
+        {
+            m_root["defaultTargetFramerate"] = value;
+        }
+        else
+        {
+            m_root.erase("defaultTargetFramerate");
         }
     }
 

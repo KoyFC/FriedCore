@@ -73,6 +73,8 @@ namespace fried::core
         DisplaySettings display() const;
         // Whether a desktop window waits for the display's refresh, true when the project does not say. Consoles and the calculator ignore it.
         bool vsync() const;
+        // The frames a second a game starts with when vsync is off, where 0 is no limit. A game may change it while it runs, so this is only where it begins.
+        int defaultTargetFramerate() const;
 
         // An empty value removes the key, which the engine reads as undeclared.
         void setName(const std::string &value);
@@ -85,6 +87,8 @@ namespace fried::core
         void setDisplay(const DisplaySettings &value);
         // Only a vsync turned off is written, so the default leaves no key behind.
         void setVsync(bool value);
+        // Only a limit above zero is written, since no limit is what the key's absence means.
+        void setDefaultTargetFramerate(int value);
         // A display of a platform's own is no longer read by the engine, which refuses to build with one.
         void dropPlatformDisplays();
 
