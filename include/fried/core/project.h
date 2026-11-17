@@ -75,6 +75,9 @@ namespace fried::core
         bool vsync() const;
         // The frames a second a game starts with when vsync is off, where 0 is no limit. A game may change it while it runs, so this is only where it begins.
         int defaultTargetFramerate() const;
+        // The fixed steps a second a game runs its physics at. The engine reads 60 when the project does not say, and so does this.
+        int physicsRate() const;
+        static constexpr int s_defaultPhysicsRate = 60;
 
         // An empty value removes the key, which the engine reads as undeclared.
         void setName(const std::string &value);
@@ -89,6 +92,8 @@ namespace fried::core
         void setVsync(bool value);
         // Only a limit above zero is written, since no limit is what the key's absence means.
         void setDefaultTargetFramerate(int value);
+        // Only a rate other than the default is written, so the default leaves no key behind.
+        void setPhysicsRate(int value);
         // A display of a platform's own is no longer read by the engine, which refuses to build with one.
         void dropPlatformDisplays();
 

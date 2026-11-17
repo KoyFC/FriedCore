@@ -199,6 +199,29 @@ TEST_CASE("vsync is on unless the project turns it off, and only an off is writt
     CHECK(parsed(R"({"vsync": "no"})").vsync());
 }
 
+TEST_CASE("the physics rate is 60 unless the project gives another")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.physicsRate() == 60);
+
+    project.setPhysicsRate(30);
+    CHECK(project.physicsRate() == 30);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"physicsRate\": 30\n}\n");
+
+    project.setPhysicsRate(60);
+    CHECK(project.physicsRate() == 60);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    project.setPhysicsRate(30);
+    project.setPhysicsRate(0);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    CHECK(parsed(R"({"physicsRate": -5})").physicsRate() == 60);
+    CHECK(parsed(R"({"physicsRate": 0})").physicsRate() == 60);
+    CHECK(parsed(R"({"physicsRate": "fast"})").physicsRate() == 60);
+    CHECK(parsed(R"({"physicsRate": 120})").physicsRate() == 120);
+}
+
 TEST_CASE("the default target framerate is no limit unless the project gives one")
 {
     Project project = parsed(R"({"name": "Sample"})");

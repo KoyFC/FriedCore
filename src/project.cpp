@@ -329,6 +329,12 @@ namespace fried::core
         return found != m_root.end() && found->is_number_integer() ? std::max(0, found->get<int>()) : 0;
     }
 
+    int Project::physicsRate() const
+    {
+        auto found = m_root.find("physicsRate");
+        return found != m_root.end() && found->is_number_integer() && found->get<int>() > 0 ? found->get<int>() : s_defaultPhysicsRate;
+    }
+
     void Project::setName(const std::string &value)
     {
         assign(m_root, "name", value);
@@ -394,6 +400,18 @@ namespace fried::core
         else
         {
             m_root.erase("defaultTargetFramerate");
+        }
+    }
+
+    void Project::setPhysicsRate(int value)
+    {
+        if (value > 0 && value != s_defaultPhysicsRate)
+        {
+            m_root["physicsRate"] = value;
+        }
+        else
+        {
+            m_root.erase("physicsRate");
         }
     }
 

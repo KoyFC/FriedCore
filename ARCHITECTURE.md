@@ -18,6 +18,8 @@ The display follows `ProjectDisplay.cmake`: a project with no `display` uses the
 
 `vsync` is a top-level boolean that is true when the key is missing or not a boolean. Only `false` is written, so a project that never touched it keeps no key. It matters to a desktop window, and the consoles and the calculator ignore it. `defaultTargetFramerate` is the frame rate a game starts at when vsync is off, `0` and a missing key meaning no limit, and the engine reads it only then: a game that lets its player pick a rate sets it again while it runs.
 
+`physicsRate` is a top-level integer, the fixed steps a second the engine runs `fixedUpdate` and its kinematic bodies at. It is 60 when the key is missing or is not a positive integer, and only a rate other than 60 is written, so a project that never touched it keeps no key. The engine reads it on every platform, and a console that cannot afford 60 may ask for 30.
+
 `checkIdentity`, `checkVersion` and `checkVitaTitleId` say what is wrong with a value, and the limits of the 3DS and DS packaging text are constants of `Project`. A tool checks a value before setting it: the setters and `save` accept anything.
 
 `logicalSize` gives the size a game draws in on a platform's own screen for the project's display mode, which is the area a camera shows there.
