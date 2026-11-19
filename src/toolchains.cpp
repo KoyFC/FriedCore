@@ -125,6 +125,8 @@ namespace fried::core
         toolchains.m_devkitPro = variable("DEVKITPRO");
         toolchains.m_fxsdk = findExecutable("fxsdk");
         toolchains.m_mingwCompiler = findExecutable("x86_64-w64-mingw32-g++");
+        toolchains.m_haxe = findExecutable("haxe");
+        toolchains.m_cmake = findExecutable("cmake");
         toolchains.m_path = variable("PATH");
 
         // Each candidate has to hold the toolchain file, so a half-finished install is skipped.

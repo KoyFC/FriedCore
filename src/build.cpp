@@ -198,6 +198,8 @@ namespace fried::core
             return {};
         }
 
+        const char *s_noCmake = "cmake is not on the PATH, so there is nothing to configure the build with.";
+
         // The Haxe compile and the steps after it, which run with the same PATH when w64devkit's tools are on it.
         std::vector<BuildStep> withHaxe(BuildType type, bool logToFile, std::vector<BuildStep> cmakeSteps)
         {
@@ -263,6 +265,12 @@ namespace fried::core
             return {};
         }
 
+        if (toolchains.m_haxe.empty())
+        {
+            *error = "haxe is not on the PATH, so the game's Haxe cannot be compiled. Install Haxe and hxcpp.";
+            return {};
+        }
+
         std::string toolchain;
         switch (target)
         {
@@ -284,6 +292,11 @@ namespace fried::core
         {
             return {};
         }
+        if (toolchains.m_cmake.empty())
+        {
+            *error = s_noCmake;
+            return {};
+        }
         return withHaxe(type, logToFile, pipeline(".", buildDirectory, type, {"-DCMAKE_TOOLCHAIN_FILE=" + toolchain}));
     }
 
@@ -293,6 +306,11 @@ namespace fried::core
         if (toolchains.m_host == HostSystem::Windows)
         {
             return windowsPipeline(sourceDirectory, buildDirectory, type, configureExtras, toolchains, error);
+        }
+        if (toolchains.m_cmake.empty())
+        {
+            *error = s_noCmake;
+            return {};
         }
         return pipeline(sourceDirectory, buildDirectory, type, configureExtras);
     }

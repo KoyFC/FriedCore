@@ -26,6 +26,8 @@ namespace
     {
         Toolchains toolchains;
         toolchains.m_host = HostSystem::Linux;
+        toolchains.m_haxe = "haxe";
+        toolchains.m_cmake = "cmake";
         return toolchains;
     }
 
@@ -34,6 +36,8 @@ namespace
         Toolchains toolchains;
         toolchains.m_host = HostSystem::Windows;
         toolchains.m_path = "C:\\Windows";
+        toolchains.m_haxe = "haxe";
+        toolchains.m_cmake = "cmake";
         return toolchains;
     }
 }
@@ -255,6 +259,37 @@ TEST_CASE("an executable is found where the build leaves it")
     CHECK(Build::executablePath("/game/build", "my_game", BuildType::Debug, linuxMachine()) == "/game/build/my_game");
     CHECK(Build::executablePath("C:/game/build", "my_game", BuildType::Debug, visualStudio) == "C:/game/build/Debug/my_game.exe");
     CHECK(Build::executablePath("C:/game/build/", "my_game", BuildType::Release, w64devkit) == "C:/game/build/my_game.exe");
+}
+
+TEST_CASE("a build with no haxe says so")
+{
+    std::string error;
+    for (Toolchains toolchains : {linuxMachine(), windowsMachine()})
+    {
+        toolchains.m_haxe.clear();
+        toolchains.m_w64devkit = "C:/tools/w64devkit-2.10.1";
+        CHECK(Build::steps(BuildTarget::Pc, BuildType::Debug, false, "/game", "build", toolchains, &error).empty());
+        CHECK(error == "haxe is not on the PATH, so the game's Haxe cannot be compiled. Install Haxe and hxcpp.");
+        CHECK(Build::status(BuildTarget::Pc, "/game", toolchains) == "Not ready: " + error);
+    }
+}
+
+TEST_CASE("a build with no cmake says so, except on Windows where its compiler brings one")
+{
+    std::string error;
+    Toolchains linux = linuxMachine();
+    linux.m_cmake.clear();
+    CHECK(Build::steps(BuildTarget::Pc, BuildType::Debug, false, "/game", "build", linux, &error).empty());
+    CHECK(error == "cmake is not on the PATH, so there is nothing to configure the build with.");
+    CHECK(Build::cmakeSteps(".", "build", BuildType::Debug, {}, linux, &error).empty());
+
+    linux.m_vitaSdk = "/missing";
+    CHECK(Build::steps(BuildTarget::Vita, BuildType::Debug, false, "/game", "build", linux, &error).empty());
+
+    Toolchains windows = windowsMachine();
+    windows.m_cmake.clear();
+    windows.m_w64devkit = "C:/tools/w64devkit-2.10.1";
+    CHECK_FALSE(Build::steps(BuildTarget::Pc, BuildType::Debug, false, "C:/game", "build", windows, &error).empty());
 }
 
 TEST_CASE("a step is shown the way a shell takes it")

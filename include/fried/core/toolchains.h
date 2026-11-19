@@ -28,6 +28,10 @@ namespace fried::core
         std::string m_visualStudioCmake;
         std::string m_w64devkit;
 
+        // The haxe and cmake commands on the PATH. Every build runs haxe, and every one but Windows' PC build runs that cmake.
+        std::string m_haxe;
+        std::string m_cmake;
+
         // The PATH a build inherits, which a w64devkit build puts its own tools in front of.
         std::string m_path;
     };
