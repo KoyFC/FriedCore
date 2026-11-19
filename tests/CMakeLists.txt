@@ -7,6 +7,7 @@ add_executable(fried_core_tests
     icon_test.cpp
     project_test.cpp
     step_runner_test.cpp
+    toolchains_test.cpp
 )
 target_link_libraries(fried_core_tests PRIVATE fried_core)
 target_compile_definitions(fried_core_tests PRIVATE FRIED_CORE_TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/data")

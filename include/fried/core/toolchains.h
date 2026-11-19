@@ -42,11 +42,17 @@ namespace fried::core
     // The folder the Project Manager keeps the toolchains it downloads in, so another tool finds them there.
     std::string managerToolsDirectory();
 
+    // The toolchains the Project Manager installed for itself: its Emscripten SDK and its newest w64devkit, each empty when it is not there in full.
+    ManagedTools managerTools();
+
+    // The CMake that drives Visual Studio's C++ tools, found with vswhere. Empty on other systems, or with no Visual Studio that has them.
+    std::string visualStudioCmake();
+
     std::string emscriptenToolchainFile(const std::string &sdkDirectory);
 
     // An executable on the PATH by its name, or an empty string. On Windows the name may leave out its extension.
     std::string findExecutable(const std::string &name);
 
-    // Looks the machine over. Visual Studio is the one thing it does not look for, as asking for it runs a program: a tool that supports it sets m_visualStudioCmake itself.
+    // Looks the machine over. Visual Studio is the one thing it does not look for, as asking for it runs a program: a tool that supports it sets m_visualStudioCmake from visualStudioCmake().
     Toolchains detectToolchains(const ManagedTools &managed);
 }
