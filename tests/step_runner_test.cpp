@@ -15,12 +15,21 @@ using namespace fried::core;
 
 namespace
 {
+#ifdef _WIN32
+    SubprocessOptions command(const std::string &line)
+    {
+        SubprocessOptions options;
+        options.m_arguments = {"cmd.exe", "/d", "/c", line};
+        return options;
+    }
+#else
     SubprocessOptions shell(const std::string &script)
     {
         SubprocessOptions options;
         options.m_arguments = {"/bin/sh", "-c", script};
         return options;
     }
+#endif
 
     StepRunner::State finish(StepRunner &runner)
     {
@@ -140,5 +149,59 @@ TEST_CASE("cancelling stops the program and what it started, at once")
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     CHECK(isGone);
+}
+#endif
+
+#ifdef _WIN32
+TEST_CASE("steps run in order and their output arrives as whole lines")
+{
+    StepRunner runner;
+    runner.start({command("echo one&& echo two"), command("echo three")});
+    CHECK(finish(runner) == StepRunner::State::Succeeded);
+    std::vector<std::string> text = textOf(runner);
+    CHECK(text.back() == "Completed.");
+    CHECK(std::vector<std::string>(text.begin() + 1, text.begin() + 3) == std::vector<std::string>{"one", "two"});
+    CHECK(runner.stepCount() == 2);
+}
+
+TEST_CASE("a step that fails stops the run and says which program it was")
+{
+    StepRunner runner;
+    runner.start({command("exit 3"), command("echo never")});
+    CHECK(finish(runner) == StepRunner::State::Failed);
+    CHECK(runner.failure() == "Stopped: cmd.exe exited with 3.");
+    CHECK(runner.step() == 1);
+}
+
+TEST_CASE("steps run in the folder and with the environment they are given")
+{
+    TemporaryDirectory directory("step-runner");
+    BuildStep step;
+    step.m_arguments = {"cmd.exe", "/d", "/c", "echo %FRIED_TEST_VALUE%> here.txt"};
+    step.m_environment["FRIED_TEST_VALUE"] = "set";
+
+    StepRunner runner;
+    runner.start(subprocessSteps({step}, directory.path()));
+    CHECK(finish(runner) == StepRunner::State::Succeeded);
+    CHECK(directory.read("here.txt") == "set\r\n");
+}
+
+TEST_CASE("cancelling stops the program and what it started, at once")
+{
+    StepRunner runner;
+    runner.start({command("ping -n 30 127.0.0.1 >nul"), command("echo never")});
+
+    auto began = std::chrono::steady_clock::now();
+    while (runner.lines().size() < 1 && std::chrono::steady_clock::now() - began < std::chrono::seconds(2))
+    {
+        runner.pump();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    auto asked = std::chrono::steady_clock::now();
+    runner.cancel();
+    CHECK(std::chrono::steady_clock::now() - asked < std::chrono::seconds(1));
+    CHECK(runner.state() == StepRunner::State::Cancelled);
+    CHECK(textOf(runner).back() == "Cancelled.");
 }
 #endif
