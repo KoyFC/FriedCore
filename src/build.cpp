@@ -131,24 +131,25 @@ namespace fried::core
             return file;
         }
 
-        std::vector<BuildStep> pipeline(const std::string &buildTree, BuildType type, bool logToFile, const std::vector<std::string> &configureExtras,
-                                        const std::string &cmake = "cmake")
+        std::vector<BuildStep> pipeline(const std::string &sourceDirectory, const std::string &buildTree, BuildType type,
+                                        const std::vector<std::string> &configureExtras, const std::string &cmake = "cmake")
         {
             std::string typeName = buildTypeName(type);
 
             BuildStep configure;
-            configure.m_arguments = {cmake, "-S", ".", "-B", buildTree, "-DCMAKE_BUILD_TYPE=" + typeName};
+            configure.m_arguments = {cmake, "-S", sourceDirectory, "-B", buildTree, "-DCMAKE_BUILD_TYPE=" + typeName};
             configure.m_arguments.insert(configure.m_arguments.end(), configureExtras.begin(), configureExtras.end());
 
             // A generator that holds every configuration at once ignores the variable and reads --config.
             BuildStep build;
             build.m_arguments = {cmake, "--build", buildTree, "--config", typeName, "--parallel"};
 
-            return {Build::haxeStep(type, logToFile), configure, build};
+            return {configure, build};
         }
 
         // Absolute paths, since a tool's own PATH never has w64devkit on it, and its bin/ in front of the PATH for whatever the build looks up there.
-        std::vector<BuildStep> w64devkitPipeline(const std::string &buildTree, BuildType type, bool logToFile, const Toolchains &toolchains)
+        std::vector<BuildStep> w64devkitPipeline(const std::string &sourceDirectory, const std::string &buildTree, BuildType type,
+                                                 const std::vector<std::string> &configureExtras, const Toolchains &toolchains)
         {
             auto tool = [&toolchains](const char *name) {
                 return native(joined(toolchains.m_w64devkit, std::string("bin/") + name + ".exe"), HostSystem::Windows);
@@ -158,7 +159,7 @@ namespace fried::core
             BuildStep configure;
             configure.m_arguments = {cmake,
                                      "-S",
-                                     ".",
+                                     sourceDirectory,
                                      "-B",
                                      buildTree,
                                      "-G",
@@ -167,11 +168,12 @@ namespace fried::core
                                      "-DCMAKE_C_COMPILER=" + tool("gcc"),
                                      "-DCMAKE_CXX_COMPILER=" + tool("g++"),
                                      "-DCMAKE_BUILD_TYPE=" + buildTypeName(type)};
+            configure.m_arguments.insert(configure.m_arguments.end(), configureExtras.begin(), configureExtras.end());
 
             BuildStep build;
             build.m_arguments = {cmake, "--build", buildTree, "--parallel"};
 
-            std::vector<BuildStep> steps = {Build::haxeStep(type, logToFile), configure, build};
+            std::vector<BuildStep> steps = {configure, build};
             std::string path = native(joined(toolchains.m_w64devkit, "bin"), HostSystem::Windows) + ";" + toolchains.m_path;
             for (BuildStep &step : steps)
             {
@@ -180,20 +182,33 @@ namespace fried::core
             return steps;
         }
 
-        std::vector<BuildStep> windowsPipeline(const std::string &buildTree, BuildType type, bool logToFile, const Toolchains &toolchains,
-                                               std::string *error)
+        std::vector<BuildStep> windowsPipeline(const std::string &sourceDirectory, const std::string &buildTree, BuildType type,
+                                               const std::vector<std::string> &configureExtras, const Toolchains &toolchains, std::string *error)
         {
             if (!toolchains.m_visualStudioCmake.empty())
             {
-                return pipeline(buildTree, type, logToFile, {}, toolchains.m_visualStudioCmake);
+                return pipeline(sourceDirectory, buildTree, type, configureExtras, toolchains.m_visualStudioCmake);
             }
             if (!toolchains.m_w64devkit.empty())
             {
-                return w64devkitPipeline(buildTree, type, logToFile, toolchains);
+                return w64devkitPipeline(sourceDirectory, buildTree, type, configureExtras, toolchains);
             }
 
             *error = "There is no C++ compiler to build with: Visual Studio's C++ tools are not installed, and neither is w64devkit.";
             return {};
+        }
+
+        // The Haxe compile and the steps after it, which run with the same PATH when w64devkit's tools are on it.
+        std::vector<BuildStep> withHaxe(BuildType type, bool logToFile, std::vector<BuildStep> cmakeSteps)
+        {
+            if (cmakeSteps.empty())
+            {
+                return cmakeSteps;
+            }
+            BuildStep haxe = Build::haxeStep(type, logToFile);
+            haxe.m_environment = cmakeSteps.front().m_environment;
+            cmakeSteps.insert(cmakeSteps.begin(), haxe);
+            return cmakeSteps;
         }
     }
 
@@ -252,11 +267,7 @@ namespace fried::core
         switch (target)
         {
         case BuildTarget::Pc:
-            if (toolchains.m_host == HostSystem::Windows)
-            {
-                return windowsPipeline(buildDirectory, type, logToFile, toolchains, error);
-            }
-            return pipeline(buildDirectory, type, logToFile, {});
+            return withHaxe(type, logToFile, Build::cmakeSteps(".", buildDirectory, type, {}, toolchains, error));
         case BuildTarget::WindowsFromHost:
             toolchain = mingwToolchainFile(projectDirectory, toolchains, error);
             break;
@@ -273,7 +284,30 @@ namespace fried::core
         {
             return {};
         }
-        return pipeline(buildDirectory, type, logToFile, {"-DCMAKE_TOOLCHAIN_FILE=" + toolchain});
+        return withHaxe(type, logToFile, pipeline(".", buildDirectory, type, {"-DCMAKE_TOOLCHAIN_FILE=" + toolchain}));
+    }
+
+    std::vector<BuildStep> Build::cmakeSteps(const std::string &sourceDirectory, const std::string &buildDirectory, BuildType type,
+                                             const std::vector<std::string> &configureExtras, const Toolchains &toolchains, std::string *error)
+    {
+        if (toolchains.m_host == HostSystem::Windows)
+        {
+            return windowsPipeline(sourceDirectory, buildDirectory, type, configureExtras, toolchains, error);
+        }
+        return pipeline(sourceDirectory, buildDirectory, type, configureExtras);
+    }
+
+    std::string Build::executablePath(const std::string &buildDirectory, const std::string &name, BuildType type, const Toolchains &toolchains)
+    {
+        if (toolchains.m_host != HostSystem::Windows)
+        {
+            return joined(buildDirectory, name);
+        }
+        if (!toolchains.m_visualStudioCmake.empty())
+        {
+            return joined(joined(buildDirectory, buildTypeName(type)), name + ".exe");
+        }
+        return joined(buildDirectory, name + ".exe");
     }
 
     std::string Build::status(BuildTarget target, const std::string &projectDirectory, const Toolchains &toolchains)

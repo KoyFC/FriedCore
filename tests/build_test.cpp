@@ -211,6 +211,52 @@ TEST_CASE("on Windows with no compiler at all the PC build asks for one to be do
     CHECK_FALSE(Build::needsCompilerDownload(BuildTarget::Pc, linuxMachine()));
 }
 
+TEST_CASE("any CMake project configures from its own folder")
+{
+    std::string error;
+    Commands plain = commandsOf(Build::cmakeSteps("/engine/editor/player", "/engine/editor/player/build", BuildType::Release, {}, linuxMachine(), &error));
+    CHECK(plain == Commands{{"cmake", "-S", "/engine/editor/player", "-B", "/engine/editor/player/build", "-DCMAKE_BUILD_TYPE=Release"},
+                            {"cmake", "--build", "/engine/editor/player/build", "--config", "Release", "--parallel"}});
+
+    Commands extra = commandsOf(Build::cmakeSteps("/engine/editor/project-player", "/game/build/editor-player", BuildType::Release,
+                                                  {"-DFRIED_PROJECT_DIR=/game"}, linuxMachine(), &error));
+    CHECK(extra[0].back() == "-DFRIED_PROJECT_DIR=/game");
+    CHECK(error.empty());
+}
+
+TEST_CASE("any CMake project builds with Visual Studio or w64devkit on Windows, or asks for a compiler")
+{
+    std::string error;
+    Toolchains visualStudio = windowsMachine();
+    visualStudio.m_visualStudioCmake = "C:\\VS\\cmake.exe";
+    std::vector<BuildStep> steps = Build::cmakeSteps("C:/engine/editor/player", "C:/engine/editor/player/build", BuildType::Release, {"-DX=1"}, visualStudio, &error);
+    CHECK(commandsOf(steps) == Commands{{"C:\\VS\\cmake.exe", "-S", "C:/engine/editor/player", "-B", "C:/engine/editor/player/build", "-DCMAKE_BUILD_TYPE=Release", "-DX=1"},
+                                        {"C:\\VS\\cmake.exe", "--build", "C:/engine/editor/player/build", "--config", "Release", "--parallel"}});
+
+    Toolchains w64devkit = windowsMachine();
+    w64devkit.m_w64devkit = "C:/tools/w64devkit-2.10.1";
+    steps = Build::cmakeSteps("C:/engine/editor/player", "build", BuildType::Debug, {"-DX=1"}, w64devkit, &error);
+    REQUIRE(steps.size() == 2);
+    CHECK(steps[0].m_arguments[2] == "C:/engine/editor/player");
+    CHECK(steps[0].m_arguments.back() == "-DX=1");
+    CHECK(steps[1].m_environment.at("PATH") == "C:\\tools\\w64devkit-2.10.1\\bin;C:\\Windows");
+
+    CHECK(Build::cmakeSteps(".", "build", BuildType::Debug, {}, windowsMachine(), &error).empty());
+    CHECK(error == "There is no C++ compiler to build with: Visual Studio's C++ tools are not installed, and neither is w64devkit.");
+}
+
+TEST_CASE("an executable is found where the build leaves it")
+{
+    Toolchains visualStudio = windowsMachine();
+    visualStudio.m_visualStudioCmake = "C:\\VS\\cmake.exe";
+    Toolchains w64devkit = windowsMachine();
+    w64devkit.m_w64devkit = "C:/tools/w64devkit-2.10.1";
+
+    CHECK(Build::executablePath("/game/build", "my_game", BuildType::Debug, linuxMachine()) == "/game/build/my_game");
+    CHECK(Build::executablePath("C:/game/build", "my_game", BuildType::Debug, visualStudio) == "C:/game/build/Debug/my_game.exe");
+    CHECK(Build::executablePath("C:/game/build/", "my_game", BuildType::Release, w64devkit) == "C:/game/build/my_game.exe");
+}
+
 TEST_CASE("a step is shown the way a shell takes it")
 {
     BuildStep step;

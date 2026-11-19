@@ -30,7 +30,7 @@ The display follows `ProjectDisplay.cmake`: a project with no `display` uses the
 
 `build.h` turns a target, a build type and a `Toolchains` into the steps of a build: the Haxe compile, the CMake configure and the CMake build, each a list of arguments run in the project's folder. `Build::steps` reads nothing but its arguments and whether the toolchain files exist, so the commands of a Windows build are tested on Linux by describing a Windows machine. When a target cannot be built it returns no steps and says what is missing, and `Build::status` is that sentence, or "Ready", for a tool to show.
 
-On Windows the PC build uses Visual Studio's CMake when there is one. Otherwise it uses w64devkit by the full path of each tool, with its `bin` folder put in front of the `PATH` of every step, as a tool's own `PATH` never has it. Installing w64devkit or the Emscripten SDK is the Project Manager's job and is not in this library.
+On Windows the PC build uses Visual Studio's CMake when there is one. Otherwise it uses w64devkit by the full path of each tool, with its `bin` folder put in front of the `PATH` of every step, as a tool's own `PATH` never has it. `Build::cmakeSteps` gives the configure and the build of any CMake project with that same compiler, which is how Fried Editor builds its player, and `Build::executablePath` says where the build leaves an executable: in a folder per configuration with Visual Studio, and with `.exe` on Windows. Installing w64devkit or the Emscripten SDK is the Project Manager's job and is not in this library.
 
 ## Running a build
 

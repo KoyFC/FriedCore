@@ -45,6 +45,13 @@ namespace fried::core
         static std::vector<BuildStep> steps(BuildTarget target, BuildType type, bool logToFile, const std::string &projectDirectory,
                                             const std::string &buildDirectory, const Toolchains &toolchains, std::string *error);
 
+        // The CMake configure and build of any project, with the compiler the PC build uses on this machine. Empty when there is none, with the reason in error.
+        static std::vector<BuildStep> cmakeSteps(const std::string &sourceDirectory, const std::string &buildDirectory, BuildType type,
+                                                 const std::vector<std::string> &configureExtras, const Toolchains &toolchains, std::string *error);
+
+        // Where a PC build leaves an executable target: a folder per configuration with Visual Studio, and .exe on Windows.
+        static std::string executablePath(const std::string &buildDirectory, const std::string &name, BuildType type, const Toolchains &toolchains);
+
         // "Ready", or why the target cannot be built yet.
         static std::string status(BuildTarget target, const std::string &projectDirectory, const Toolchains &toolchains);
 
