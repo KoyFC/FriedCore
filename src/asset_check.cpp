@@ -225,11 +225,50 @@ namespace fried::core
                 }
             }
         }
+
+        // A PNG names its color type in the header, and 3 is a palette.
+        bool isPalettePng(const std::string &file)
+        {
+            const unsigned char signature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
+            unsigned char header[26] = {};
+            std::ifstream stream(pathOf(file), std::ios::binary);
+            stream.read((char *)header, sizeof(header));
+            return stream && std::memcmp(header, signature, sizeof(signature)) == 0 && std::memcmp(header + 12, "IHDR", 4) == 0 && header[25] == 3;
+        }
+
+        const std::string s_vitaPackageDirectory = "sce_sys";
+
+        void checkVitaPackage(const std::string &projectDirectory, std::vector<AssetIssue> &issues)
+        {
+            for (const Entry &entry : listAssets(projectDirectory + "/" + s_vitaPackageDirectory))
+            {
+                std::string path = s_vitaPackageDirectory + "/" + entry.m_path;
+                if (entry.m_kind == Kind::Image && !isPalettePng(projectDirectory + "/" + path))
+                {
+                    issues.push_back({AssetIssue::Severity::Error, path, "The Vita's installer refuses an image that is not a palette PNG, and this is not one.",
+                                      AssetIssue::Fix::PaletteImage, "Convert to 256 colors"});
+                }
+            }
+        }
+
+        constexpr int s_paletteColorLimit = 256;
+
+        bool writePaletteImage(const std::string &source, const std::string &destination, std::string *error)
+        {
+            Image image = readImage(source, error);
+            if (image.isNull())
+            {
+                return false;
+            }
+            bool wasApproximated = false;
+            return writeFiles(textOf(pathOf(destination).parent_path()), {{textOf(pathOf(destination).filename()), encodePalettePng(quantized(image, s_paletteColorLimit, false, &wasApproximated))}}, error);
+        }
     }
 
-    std::vector<AssetIssue> validateAssets(Platform platform, const std::string &assetsDirectory)
+    std::vector<AssetIssue> validateAssets(Platform platform, const std::string &projectDirectory)
     {
         std::vector<AssetIssue> issues;
+        std::string assetsDirectory = projectDirectory + "/assets";
         std::uintmax_t total = 0;
         for (const Entry &entry : listAssets(assetsDirectory))
         {
@@ -243,20 +282,28 @@ namespace fried::core
             issues.push_back({AssetIssue::Severity::Error, "",
                               "The assets add up to " + std::to_string(total / 1024) + " KB, and the fx-CG50 has room for 2048 KB beside the game.", AssetIssue::Fix::None, ""});
         }
+        if (platform == Platform::Vita)
+        {
+            checkVitaPackage(projectDirectory, issues);
+        }
         return issues;
     }
 
-    bool applyFix(const AssetIssue &issue, const std::string &assetsDirectory, const std::string &backupDirectory, std::string *error)
+    bool applyFix(const AssetIssue &issue, const std::string &projectDirectory, const std::string &backupDirectory, std::string *error)
     {
-        const std::string prefix = "game/";
-        if (issue.m_fix == AssetIssue::Fix::None || issue.m_asset.rfind(prefix, 0) != 0 || issue.m_asset.size() == prefix.size())
+        const std::string assetPrefix = "game/";
+        const std::string packagePrefix = s_vitaPackageDirectory + "/";
+        bool isAsset = issue.m_asset.rfind(assetPrefix, 0) == 0 && issue.m_asset.size() > assetPrefix.size();
+        bool isPackageFile = issue.m_asset.rfind(packagePrefix, 0) == 0 && issue.m_asset.size() > packagePrefix.size();
+        if (issue.m_fix == AssetIssue::Fix::None || (!isAsset && !isPackageFile))
         {
             *error = "This issue has no fix.";
             return false;
         }
 
-        std::string path = issue.m_asset.substr(prefix.size());
-        std::string file = assetsDirectory + "/" + path;
+        // An asset is kept by its path in the assets folder and a package file by its path in the project, which is where each is found.
+        std::string path = isAsset ? issue.m_asset.substr(assetPrefix.size()) : issue.m_asset;
+        std::string file = (isAsset ? projectDirectory + "/assets" : projectDirectory) + "/" + path;
         fs::path backup = pathOf(backupDirectory) / pathOf(path);
         std::error_code failure;
         fs::create_directories(backup.parent_path(), failure);
@@ -273,6 +320,10 @@ namespace fried::core
         if (issue.m_fix == AssetIssue::Fix::ShrinkImage)
         {
             return shrinkImage(textOf(backup), file, s_maxTextureSide, error);
+        }
+        if (issue.m_fix == AssetIssue::Fix::PaletteImage)
+        {
+            return writePaletteImage(textOf(backup), file, error);
         }
 
         Wav wav = readWav(textOf(backup));

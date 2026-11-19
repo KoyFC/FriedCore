@@ -24,16 +24,21 @@ namespace
 
         ~TestProject() { fs::remove_all(m_root); }
 
+        std::string directory() const { return m_root.string(); }
         std::string assets() const { return (m_root / "assets").string(); }
         std::string backups() const { return (m_root / "backup").string(); }
 
-        void image(const std::string &name, int width, int height) const
+        void image(const std::string &name, int width, int height) const { imageAt("assets/" + name, width, height); }
+
+        // Relative to the project's folder, for a file that is not one of its assets.
+        void imageAt(const std::string &path, int width, int height) const
         {
             Image pixels;
             pixels.m_width = width;
             pixels.m_height = height;
             pixels.m_rgba.assign((size_t)width * height * 4, 200);
-            REQUIRE(writeImage((m_root / "assets" / name).string(), pixels));
+            fs::create_directories((m_root / path).parent_path());
+            REQUIRE(writeImage((m_root / path).string(), pixels));
         }
 
         // A 16 bit PCM WAV with a few frames of silence.
@@ -75,20 +80,20 @@ TEST_CASE("a texture over 1024 pixels is refused on the 3DS and DS, shrunk by it
     project.image("big.png", 2048, 1024);
     project.image("small.png", 64, 64);
 
-    CHECK(validateAssets(Platform::Pc, project.assets()).empty());
+    CHECK(validateAssets(Platform::Pc, project.directory()).empty());
 
-    auto issues = validateAssets(Platform::Nintendo3ds, project.assets());
+    auto issues = validateAssets(Platform::Nintendo3ds, project.directory());
     REQUIRE(issues.size() == 1);
     CHECK(issues[0].m_asset == "game/big.png");
     CHECK(issues[0].m_fix == AssetIssue::Fix::ShrinkImage);
 
     std::string error;
-    REQUIRE(applyFix(issues[0], project.assets(), project.backups(), &error));
+    REQUIRE(applyFix(issues[0], project.directory(), project.backups(), &error));
     int width = 0, height = 0;
     REQUIRE(imageSize(project.assets() + "/big.png", &width, &height));
     CHECK(width == 1024);
     CHECK(height == 512);
-    CHECK(validateAssets(Platform::Nintendo3ds, project.assets()).empty());
+    CHECK(validateAssets(Platform::Nintendo3ds, project.directory()).empty());
 
     CHECK(imageSize(project.backups() + "/big.png", &width, &height));
     CHECK(width == 2048);
@@ -102,10 +107,10 @@ TEST_CASE("the DS wants mono PCM WAV, and a stereo file is converted")
     project.wav("adpcm.wav", 1, 2);
     std::ofstream(project.assets() + "/music.ogg") << "not a wav";
 
-    auto issues = validateAssets(Platform::NintendoDs, project.assets());
+    auto issues = validateAssets(Platform::NintendoDs, project.directory());
     CHECK(issues.size() == 3);
     CHECK(count(issues, AssetIssue::Fix::DownmixWav) == 1);
-    CHECK(validateAssets(Platform::Pc, project.assets()).empty());
+    CHECK(validateAssets(Platform::Pc, project.directory()).empty());
 
     AssetIssue stereo;
     for (const AssetIssue &issue : issues)
@@ -117,8 +122,8 @@ TEST_CASE("the DS wants mono PCM WAV, and a stereo file is converted")
     }
     CHECK(stereo.m_asset == "game/stereo.wav");
     std::string error;
-    REQUIRE(applyFix(stereo, project.assets(), project.backups(), &error));
-    CHECK(validateAssets(Platform::NintendoDs, project.assets()).size() == 2);
+    REQUIRE(applyFix(stereo, project.directory(), project.backups(), &error));
+    CHECK(validateAssets(Platform::NintendoDs, project.directory()).size() == 2);
     CHECK(fs::file_size(project.assets() + "/stereo.wav") < fs::file_size(project.backups() + "/stereo.wav"));
 }
 
@@ -126,7 +131,7 @@ TEST_CASE("the fx-CG50 warns about audio and about a project that does not fit")
 {
     TestProject project;
     project.wav("beep.wav", 1);
-    auto issues = validateAssets(Platform::Cg50, project.assets());
+    auto issues = validateAssets(Platform::Cg50, project.directory());
     REQUIRE(issues.size() == 1);
     CHECK(issues[0].m_severity == AssetIssue::Severity::Warning);
 
@@ -134,11 +139,34 @@ TEST_CASE("the fx-CG50 warns about audio and about a project that does not fit")
     std::vector<char> zeros(3 * 1024 * 1024);
     big.write(zeros.data(), (std::streamsize)zeros.size());
     big.close();
-    issues = validateAssets(Platform::Cg50, project.assets());
+    issues = validateAssets(Platform::Cg50, project.directory());
     REQUIRE(issues.size() == 2);
     CHECK(issues[1].m_asset.empty());
     CHECK(issues[1].m_severity == AssetIssue::Severity::Error);
 
     std::string error;
-    CHECK_FALSE(applyFix(issues[1], project.assets(), project.backups(), &error));
+    CHECK_FALSE(applyFix(issues[1], project.directory(), project.backups(), &error));
+}
+
+TEST_CASE("the Vita refuses a truecolor image in its package, which is turned into a palette PNG")
+{
+    TestProject project;
+    project.imageAt("sce_sys/icon0.png", 128, 128);
+    project.image("sprite.png", 64, 64);
+
+    CHECK(validateAssets(Platform::Pc, project.directory()).empty());
+
+    auto issues = validateAssets(Platform::Vita, project.directory());
+    REQUIRE(issues.size() == 1);
+    CHECK(issues[0].m_asset == "sce_sys/icon0.png");
+    CHECK(issues[0].m_severity == AssetIssue::Severity::Error);
+    CHECK(issues[0].m_fix == AssetIssue::Fix::PaletteImage);
+
+    std::string error;
+    REQUIRE(applyFix(issues[0], project.directory(), project.backups(), &error));
+    CHECK(validateAssets(Platform::Vita, project.directory()).empty());
+    CHECK(fs::exists(project.backups() + "/sce_sys/icon0.png"));
+    int width = 0, height = 0;
+    REQUIRE(imageSize(project.directory() + "/sce_sys/icon0.png", &width, &height));
+    CHECK(width == 128);
 }
