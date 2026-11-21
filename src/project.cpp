@@ -415,6 +415,54 @@ namespace fried::core
         }
     }
 
+    std::vector<Platform> Project::declaredPlatforms() const
+    {
+        std::vector<Platform> declared;
+        auto found = m_root.find("platforms");
+        if (found == m_root.end() || !found->is_array())
+        {
+            return declared;
+        }
+        for (Platform platform : s_platforms)
+        {
+            for (const Json &entry : *found)
+            {
+                if (entry.is_string() && entry.get<std::string>() == platformKey(platform))
+                {
+                    declared.push_back(platform);
+                    break;
+                }
+            }
+        }
+        return declared;
+    }
+
+    bool Project::declares(Platform platform) const
+    {
+        std::vector<Platform> declared = declaredPlatforms();
+        return declared.empty() || std::find(declared.begin(), declared.end(), platform) != declared.end();
+    }
+
+    void Project::setDeclaredPlatforms(const std::vector<Platform> &platforms)
+    {
+        Json list = Json::array();
+        for (Platform platform : s_platforms)
+        {
+            if (std::find(platforms.begin(), platforms.end(), platform) != platforms.end())
+            {
+                list.push_back(platformKey(platform));
+            }
+        }
+        if (list.empty() || list.size() == s_platforms.size())
+        {
+            m_root.erase("platforms");
+        }
+        else
+        {
+            m_root["platforms"] = list;
+        }
+    }
+
     void Project::dropPlatformDisplays()
     {
         for (Platform platform : s_platforms)

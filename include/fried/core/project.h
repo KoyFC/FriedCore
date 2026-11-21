@@ -78,6 +78,10 @@ namespace fried::core
         // The fixed steps a second a game runs its physics at. The engine reads 60 when the project does not say, and so does this.
         int physicsRate() const;
         static constexpr int s_defaultPhysicsRate = 60;
+        // The platforms the project declares, which the engine refuses to build for any other. Empty when it declares none, which is every platform.
+        std::vector<Platform> declaredPlatforms() const;
+        // Whether the engine builds the project for the platform: true for all of them when none is declared.
+        bool declares(Platform platform) const;
 
         // An empty value removes the key, which the engine reads as undeclared.
         void setName(const std::string &value);
@@ -94,6 +98,8 @@ namespace fried::core
         void setDefaultTargetFramerate(int value);
         // Only a rate other than the default is written, so the default leaves no key behind.
         void setPhysicsRate(int value);
+        // Declaring every platform is declaring none, so that leaves no key behind. An empty list is not written either, since the engine refuses it.
+        void setDeclaredPlatforms(const std::vector<Platform> &platforms);
         // A display of a platform's own is no longer read by the engine, which refuses to build with one.
         void dropPlatformDisplays();
 

@@ -237,3 +237,30 @@ TEST_CASE("the default target framerate is no limit unless the project gives one
     CHECK(parsed(R"({"defaultTargetFramerate": -5})").defaultTargetFramerate() == 0);
     CHECK(parsed(R"({"defaultTargetFramerate": "fast"})").defaultTargetFramerate() == 0);
 }
+
+TEST_CASE("a project declares no platforms unless it says so, which is every one")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.declaredPlatforms().empty());
+    for (Platform platform : fried::core::s_platforms)
+    {
+        CHECK(project.declares(platform));
+    }
+
+    project.setDeclaredPlatforms({Platform::NintendoDs, Platform::Pc});
+    CHECK(project.declaredPlatforms() == std::vector<Platform>{Platform::Pc, Platform::NintendoDs});
+    CHECK(project.declares(Platform::Pc));
+    CHECK(project.declares(Platform::NintendoDs));
+    CHECK_FALSE(project.declares(Platform::Vita));
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"platforms\": [\n\t\t\"pc\",\n\t\t\"nds\"\n\t]\n}\n");
+
+    project.setDeclaredPlatforms({});
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    project.setDeclaredPlatforms({Platform::Cg50});
+    project.setDeclaredPlatforms(std::vector<Platform>(fried::core::s_platforms.begin(), fried::core::s_platforms.end()));
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    CHECK(parsed(R"({"platforms": ["web", "gamecube"]})").declaredPlatforms() == std::vector<Platform>{Platform::Web});
+    CHECK(parsed(R"({"platforms": "pc"})").declaredPlatforms().empty());
+}
