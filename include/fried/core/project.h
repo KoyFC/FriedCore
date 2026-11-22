@@ -69,6 +69,9 @@ namespace fried::core
 
         // The scenes the game loads once at startup and keeps, in order.
         std::vector<std::string> autoloads() const;
+
+        // The `input` block, the input actions the game declares, as the file has it, or an empty object when there is none. The engine reads it and the editor edits it, so it is kept whole.
+        nlohmann::json inputBlock() const;
         std::string vitaTitleId() const;
         // A line of packaging text a platform's section may give, empty when it falls back to the game's identity.
         std::string packagingText(const std::string &section, const std::string &key) const;
@@ -93,6 +96,9 @@ namespace fried::core
         void setWindowTitle(const std::string &value);
         void setStartScene(const std::string &value);
         void setAutoloads(const std::vector<std::string> &scenes);
+
+        // An empty object, or one with no maps, takes the block out of the file.
+        void setInputBlock(const nlohmann::json &block);
         void setVitaTitleId(const std::string &value);
         void setPackagingText(const std::string &section, const std::string &key, const std::string &value);
         void setDisplay(const DisplaySettings &value);

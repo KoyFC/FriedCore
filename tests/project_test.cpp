@@ -276,3 +276,16 @@ TEST_CASE("the autoloads are read in order and an empty list removes the key")
     project.setAutoloads({});
     CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
 }
+
+TEST_CASE("the input block is kept whole, and an empty one removes the key")
+{
+    Project project = parsed(R"({"name": "Sample", "input": {"maps": [{"name": "Gameplay"}]}})");
+    CHECK(project.inputBlock()["maps"][0]["name"] == "Gameplay");
+
+    project.setInputBlock({{"maps", nlohmann::json::array({{{"name", "Menu"}}})}});
+    CHECK(project.inputBlock()["maps"][0]["name"] == "Menu");
+
+    project.setInputBlock({{"maps", nlohmann::json::array()}});
+    CHECK(project.inputBlock().empty());
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+}

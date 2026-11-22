@@ -389,6 +389,25 @@ namespace fried::core
         }
     }
 
+    Json Project::inputBlock() const
+    {
+        auto found = m_root.find("input");
+        return found != m_root.end() && found->is_object() ? *found : Json::object();
+    }
+
+    void Project::setInputBlock(const Json &block)
+    {
+        auto maps = block.is_object() ? block.find("maps") : block.end();
+        if (!block.is_object() || block.empty() || (maps != block.end() && maps->is_array() && maps->empty() && block.size() == 1))
+        {
+            m_root.erase("input");
+        }
+        else
+        {
+            m_root["input"] = block;
+        }
+    }
+
     void Project::setVitaTitleId(const std::string &value)
     {
         assignNested(m_root, "vita", "titleId", value);
