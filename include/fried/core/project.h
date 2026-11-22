@@ -66,6 +66,9 @@ namespace fried::core
         std::string windowTitle() const;
         // The scene the game opens with, by its file's name without ".scene.json".
         std::string startScene() const;
+
+        // The scenes the game loads once at startup and keeps, in order.
+        std::vector<std::string> autoloads() const;
         std::string vitaTitleId() const;
         // A line of packaging text a platform's section may give, empty when it falls back to the game's identity.
         std::string packagingText(const std::string &section, const std::string &key) const;
@@ -89,6 +92,7 @@ namespace fried::core
         void setVersion(const std::string &value);
         void setWindowTitle(const std::string &value);
         void setStartScene(const std::string &value);
+        void setAutoloads(const std::vector<std::string> &scenes);
         void setVitaTitleId(const std::string &value);
         void setPackagingText(const std::string &section, const std::string &key, const std::string &value);
         void setDisplay(const DisplaySettings &value);

@@ -281,6 +281,23 @@ namespace fried::core
         return stringOf(m_root, "startScene");
     }
 
+    std::vector<std::string> Project::autoloads() const
+    {
+        std::vector<std::string> scenes;
+        auto found = m_root.find("autoload");
+        if (found != m_root.end() && found->is_array())
+        {
+            for (const Json &scene : *found)
+            {
+                if (scene.is_string())
+                {
+                    scenes.push_back(scene.get<std::string>());
+                }
+            }
+        }
+        return scenes;
+    }
+
     std::string Project::vitaTitleId() const
     {
         return nested(m_root, "vita", "titleId");
@@ -358,6 +375,18 @@ namespace fried::core
     void Project::setStartScene(const std::string &value)
     {
         assign(m_root, "startScene", value);
+    }
+
+    void Project::setAutoloads(const std::vector<std::string> &scenes)
+    {
+        if (scenes.empty())
+        {
+            m_root.erase("autoload");
+        }
+        else
+        {
+            m_root["autoload"] = scenes;
+        }
     }
 
     void Project::setVitaTitleId(const std::string &value)

@@ -264,3 +264,15 @@ TEST_CASE("a project declares no platforms unless it says so, which is every one
     CHECK(parsed(R"({"platforms": ["web", "gamecube"]})").declaredPlatforms() == std::vector<Platform>{Platform::Web});
     CHECK(parsed(R"({"platforms": "pc"})").declaredPlatforms().empty());
 }
+
+TEST_CASE("the autoloads are read in order and an empty list removes the key")
+{
+    Project project = parsed(R"({"name": "Sample", "autoload": ["shell", "music", 3]})");
+    CHECK(project.autoloads() == std::vector<std::string>({"shell", "music"}));
+
+    project.setAutoloads({"music"});
+    CHECK(project.text() == "{\n\t\"autoload\": [\n\t\t\"music\"\n\t],\n\t\"name\": \"Sample\"\n}\n");
+
+    project.setAutoloads({});
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+}
