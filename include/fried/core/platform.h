@@ -93,4 +93,28 @@ namespace fried::core
             return "Linux";
         }
     }
+
+    // The width of Haxe's Float in a build: single is a 32-bit float, which a platform with no floating point unit computes about a third faster, and double is a 64-bit double, which keeps whole numbers exact up to 2^53 and not 2^24.
+    enum class Precision
+    {
+        Single,
+        Double
+    };
+
+    // What a platform builds with when its section does not say. Only the DS, whose ARM9 has no floating point unit, defaults to single.
+    inline Precision defaultPrecision(Platform platform)
+    {
+        return platform == Platform::NintendoDs ? Precision::Single : Precision::Double;
+    }
+
+    // Whether the engine builds the platform with either precision, which is every platform but the calculator, where single has not been tried.
+    inline bool offersPrecision(Platform platform)
+    {
+        return platform != Platform::Cg50;
+    }
+
+    inline std::string precisionKey(Precision precision)
+    {
+        return precision == Precision::Single ? "single" : "double";
+    }
 }

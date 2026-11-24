@@ -485,6 +485,25 @@ namespace fried::core
         return declared;
     }
 
+    Precision Project::precision(Platform platform) const
+    {
+        std::string value = nested(m_root, platformKey(platform), "precision");
+        if (value == precisionKey(Precision::Single))
+        {
+            return Precision::Single;
+        }
+        if (value == precisionKey(Precision::Double))
+        {
+            return Precision::Double;
+        }
+        return defaultPrecision(platform);
+    }
+
+    void Project::setPrecision(Platform platform, Precision value)
+    {
+        assignNested(m_root, platformKey(platform), "precision", value == defaultPrecision(platform) ? std::string() : precisionKey(value));
+    }
+
     bool Project::declares(Platform platform) const
     {
         std::vector<Platform> declared = declaredPlatforms();

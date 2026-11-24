@@ -199,6 +199,33 @@ TEST_CASE("vsync is on unless the project turns it off, and only an off is writt
     CHECK(parsed(R"({"vsync": "no"})").vsync());
 }
 
+TEST_CASE("the precision is single on the DS and double elsewhere, and only another value is written")
+{
+    using fried::core::Platform;
+    using fried::core::Precision;
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.precision(Platform::NintendoDs) == Precision::Single);
+    CHECK(project.precision(Platform::Pc) == Precision::Double);
+    CHECK(project.precision(Platform::Nintendo3ds) == Precision::Double);
+
+    project.setPrecision(Platform::NintendoDs, Precision::Double);
+    CHECK(project.precision(Platform::NintendoDs) == Precision::Double);
+    CHECK(project.precision(Platform::Pc) == Precision::Double);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"precision\": \"double\"\n\t}\n}\n");
+
+    project.setPrecision(Platform::NintendoDs, Precision::Single);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    project.setPrecision(Platform::Nintendo3ds, Precision::Single);
+    CHECK(project.precision(Platform::Nintendo3ds) == Precision::Single);
+    project.setPrecision(Platform::Nintendo3ds, Precision::Double);
+    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+
+    CHECK(parsed(R"({"nds": {"precision": "quad"}})").precision(Platform::NintendoDs) == Precision::Single);
+    CHECK(parsed(R"({"pc": {"precision": 32}})").precision(Platform::Pc) == Precision::Double);
+    CHECK(parsed(R"({"pc": {"precision": "single", "other": 1}})").precision(Platform::Pc) == Precision::Single);
+}
+
 TEST_CASE("the physics rate is 60 unless the project gives another")
 {
     Project project = parsed(R"({"name": "Sample"})");

@@ -84,6 +84,8 @@ namespace fried::core
         // The fixed steps a second a game runs its physics at. The engine reads 60 when the project does not say, and so does this.
         int physicsRate() const;
         static constexpr int s_defaultPhysicsRate = 60;
+        // How wide the numbers of the game's Haxe code are on the platform, which is the "precision" of its section: "single" makes Haxe's Float a 32-bit float and "double" leaves it a 64-bit double. The DS has no floating point unit and defaults to single, every other platform to double, and a missing or unknown value is the default.
+        Precision precision(Platform platform) const;
         // The platforms the project declares, which the engine refuses to build for any other. Empty when it declares none, which is every platform.
         std::vector<Platform> declaredPlatforms() const;
         // Whether the engine builds the project for the platform: true for all of them when none is declared.
@@ -108,6 +110,8 @@ namespace fried::core
         void setDefaultTargetFramerate(int value);
         // Only a rate other than the default is written, so the default leaves no key behind.
         void setPhysicsRate(int value);
+        // Only a precision other than the platform's default is written, so the default leaves no key behind.
+        void setPrecision(Platform platform, Precision value);
         // Declaring every platform is declaring none, so that leaves no key behind. An empty list is not written either, since the engine refuses it.
         void setDeclaredPlatforms(const std::vector<Platform> &platforms);
         // A display of a platform's own is no longer read by the engine, which refuses to build with one.
