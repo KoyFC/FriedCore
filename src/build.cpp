@@ -1,5 +1,6 @@
 #include "fried/core/build.h"
 
+#include "fried/core/android.h"
 #include "fried/core/engine_location.h"
 #include "paths.h"
 
@@ -256,6 +257,12 @@ namespace fried::core
         return target == BuildTarget::Web && toolchains.m_emscriptenSdk.empty();
     }
 
+    bool Build::needsAndroidDownload(BuildTarget target, const Toolchains &toolchains)
+    {
+        return target == BuildTarget::Android &&
+               (toolchains.m_androidNdk.empty() || toolchains.m_androidSdk.empty() || toolchains.m_javaHome.empty());
+    }
+
     std::vector<BuildStep> Build::steps(BuildTarget target, BuildType type, bool logToFile, const std::string &projectDirectory,
                                         const std::string &buildDirectory, const Toolchains &toolchains, std::string *error)
     {
@@ -285,6 +292,28 @@ namespace fried::core
         case BuildTarget::Web:
             toolchain = webToolchainFile(toolchains, error);
             break;
+        case BuildTarget::Android:
+            if (toolchains.m_host == HostSystem::Windows)
+            {
+                *error = "Android builds are made on Linux for now.";
+                return {};
+            }
+            if (needsAndroidDownload(target, toolchains))
+            {
+                *error = "The Android NDK, SDK or JDK is missing, so there is nothing to build for Android with.";
+                return {};
+            }
+            if (toolchains.m_cmake.empty())
+            {
+                *error = s_noCmake;
+                return {};
+            }
+            return withHaxe(type, logToFile,
+                            pipeline(".", buildDirectory, type,
+                                     {"-DCMAKE_TOOLCHAIN_FILE=" + android::ndkToolchainFile(toolchains.m_androidNdk),
+                                      std::string("-DANDROID_ABI=") + android::s_abi,
+                                      std::string("-DANDROID_PLATFORM=") + android::s_minPlatform,
+                                      "-DFRIED_ANDROID_SDK=" + toolchains.m_androidSdk, "-DFRIED_JAVA_HOME=" + toolchains.m_javaHome}));
         default:
             toolchain = consoleToolchainFile(platformOf(target), toolchains, error);
         }
@@ -330,7 +359,7 @@ namespace fried::core
 
     std::string Build::status(BuildTarget target, const std::string &projectDirectory, const Toolchains &toolchains)
     {
-        if (needsCompilerDownload(target, toolchains) || needsEmscriptenDownload(target, toolchains))
+        if (needsCompilerDownload(target, toolchains) || needsEmscriptenDownload(target, toolchains) || needsAndroidDownload(target, toolchains))
         {
             return "Not ready: the tool has to download a compiler first.";
         }

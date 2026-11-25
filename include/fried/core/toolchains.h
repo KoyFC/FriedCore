@@ -24,6 +24,11 @@ namespace fried::core
         // The folder of an Emscripten SDK that holds its toolchain file.
         std::string m_emscriptenSdk;
 
+        // The NDK, the SDK with the platform and build-tools the engine packages with, and a JDK's home, which an Android build needs all three of.
+        std::string m_androidNdk;
+        std::string m_androidSdk;
+        std::string m_javaHome;
+
         // On Windows, the CMake that drives Visual Studio's C++ tools, and the folder of a w64devkit with CMake, Ninja and g++ in it. Visual Studio is preferred when both are there.
         std::string m_visualStudioCmake;
         std::string m_w64devkit;
@@ -41,12 +46,15 @@ namespace fried::core
     {
         std::string m_emscriptenSdk;
         std::string m_w64devkit;
+        std::string m_androidNdk;
+        std::string m_androidSdk;
+        std::string m_javaHome;
     };
 
     // The folder the Project Manager keeps the toolchains it downloads in, so another tool finds them there.
     std::string managerToolsDirectory();
 
-    // The toolchains the Project Manager installed for itself: its Emscripten SDK and its newest w64devkit, each empty when it is not there in full.
+    // The toolchains the Project Manager installed for itself: its Emscripten SDK, its newest w64devkit and its Android NDK, SDK and JDK, each empty when it is not there in full.
     ManagedTools managerTools();
 
     // The CMake that drives Visual Studio's C++ tools, found with vswhere. Empty on other systems, or with no Visual Studio that has them.

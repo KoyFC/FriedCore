@@ -40,6 +40,8 @@ namespace fried::core
         static bool needsCompilerDownload(BuildTarget target, const Toolchains &toolchains);
         // The web build, with no Emscripten SDK anywhere a tool looks.
         static bool needsEmscriptenDownload(BuildTarget target, const Toolchains &toolchains);
+        // The Android build, missing the NDK, the SDK or a JDK.
+        static bool needsAndroidDownload(BuildTarget target, const Toolchains &toolchains);
 
         // The Haxe compile, the CMake configure and the CMake build. Empty when the target cannot be built on this machine, with the reason in error.
         static std::vector<BuildStep> steps(BuildTarget target, BuildType type, bool logToFile, const std::string &projectDirectory,

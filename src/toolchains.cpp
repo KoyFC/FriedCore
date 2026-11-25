@@ -1,4 +1,6 @@
 #include "fried/core/toolchains.h"
+
+#include "fried/core/android.h"
 #include "fried/core/process.h"
 #include "paths.h"
 
@@ -141,6 +143,35 @@ namespace fried::core
             }
         }
 
+        for (const std::string &candidate : {variable("ANDROID_NDK_ROOT"), variable("ANDROID_NDK_HOME"), managed.m_androidNdk})
+        {
+            if (android::isNdk(candidate))
+            {
+                toolchains.m_androidNdk = candidate;
+                break;
+            }
+        }
+        for (const std::string &candidate : {variable("ANDROID_HOME"), variable("ANDROID_SDK_ROOT"), managed.m_androidSdk})
+        {
+            if (android::isSdk(candidate))
+            {
+                toolchains.m_androidSdk = candidate;
+                break;
+            }
+        }
+        // A JDK installed by a package manager puts javac on the PATH through links, which lead back to its home.
+        std::string pathJavac = findExecutable("javac");
+        std::error_code linkError;
+        std::string pathJdk = pathJavac.empty() ? std::string() : textOf(fs::canonical(pathOf(pathJavac), linkError).parent_path().parent_path());
+        for (const std::string &candidate : {variable("JAVA_HOME"), managed.m_javaHome, linkError ? std::string() : pathJdk})
+        {
+            if (android::isJdk(candidate))
+            {
+                toolchains.m_javaHome = candidate;
+                break;
+            }
+        }
+
         if (!managed.m_w64devkit.empty() && hasAllOf(managed.m_w64devkit, {"cmake", "ninja", "g++"}))
         {
             toolchains.m_w64devkit = managed.m_w64devkit;
@@ -194,6 +225,19 @@ namespace fried::core
                 newest = version;
                 managed.m_w64devkit = textOf(entry.path());
             }
+        }
+        std::string androidSdk = android::managedSdkDirectory(textOf(tools));
+        if (android::isNdk(android::managedNdkDirectory(textOf(tools))))
+        {
+            managed.m_androidNdk = android::managedNdkDirectory(textOf(tools));
+        }
+        if (android::isSdk(androidSdk))
+        {
+            managed.m_androidSdk = androidSdk;
+        }
+        if (android::isJdk(android::managedJdkDirectory(textOf(tools))))
+        {
+            managed.m_javaHome = android::managedJdkDirectory(textOf(tools));
         }
         return managed;
     }

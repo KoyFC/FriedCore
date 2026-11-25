@@ -3,6 +3,7 @@
 #include "fried/core/build.h"
 #include "temporary_directory.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 
@@ -330,3 +331,27 @@ TEST_CASE("the machine is looked over through its environment and its PATH")
     unsetenv("EMSDK");
 }
 #endif
+
+TEST_CASE("the Android build configures with the NDK's toolchain, or asks for the NDK, SDK and JDK")
+{
+    Toolchains toolchains = linuxMachine();
+    CHECK(Build::needsAndroidDownload(BuildTarget::Android, toolchains));
+    CHECK_FALSE(Build::needsAndroidDownload(BuildTarget::Pc, toolchains));
+
+    toolchains.m_androidNdk = "/sdk/ndk";
+    toolchains.m_androidSdk = "/sdk";
+    toolchains.m_javaHome = "/jdk";
+    CHECK_FALSE(Build::needsAndroidDownload(BuildTarget::Android, toolchains));
+
+    std::string error;
+    std::vector<BuildStep> steps = Build::steps(BuildTarget::Android, BuildType::Debug, false, "/project", "build/android", toolchains, &error);
+    REQUIRE(steps.size() == 3);
+    const std::vector<std::string> &configure = steps[1].m_arguments;
+    CHECK(std::find(configure.begin(), configure.end(), "-DCMAKE_TOOLCHAIN_FILE=/sdk/ndk/build/cmake/android.toolchain.cmake") != configure.end());
+    CHECK(std::find(configure.begin(), configure.end(), "-DANDROID_ABI=arm64-v8a") != configure.end());
+    CHECK(std::find(configure.begin(), configure.end(), "-DFRIED_ANDROID_SDK=/sdk") != configure.end());
+    CHECK(std::find(configure.begin(), configure.end(), "-DFRIED_JAVA_HOME=/jdk") != configure.end());
+
+    toolchains.m_host = HostSystem::Windows;
+    CHECK(Build::steps(BuildTarget::Android, BuildType::Debug, false, "/project", "build/android", toolchains, &error).empty());
+}
