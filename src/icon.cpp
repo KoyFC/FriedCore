@@ -14,11 +14,14 @@ namespace fried::core
         const char *s_nintendoDsPath = "nds/icon.bmp";
         const char *s_cg50Path = "cg50/icon-uns.png";
         const char *s_cg50SelectedPath = "cg50/icon-sel.png";
+        const char *s_androidPath = "android/icon.png";
 
         constexpr int s_vitaIconSize = 128;
         constexpr int s_switchIconSize = 256;
         constexpr int s_nintendo3dsIconSize = 48;
         constexpr int s_nintendoDsIconSize = 32;
+        // The launcher's largest density, which Android scales down for the others.
+        constexpr int s_androidIconSize = 192;
         // The DS menu's icon has sixteen colors, the first of them transparent.
         constexpr int s_nintendoDsColors = 16;
         constexpr int s_paletteColorLimit = 256;
@@ -65,6 +68,15 @@ namespace fried::core
             RenderedIcon icon;
             icon.m_files = {{s_pcPath, encodePng(pc)}};
             icon.m_preview = std::move(pc);
+            return icon;
+        }
+
+        RenderedIcon forAndroid(const Image &source, std::vector<std::string> *notes)
+        {
+            Image sized = resized(squared(source, notes), s_androidIconSize, s_androidIconSize, notes);
+            RenderedIcon icon;
+            icon.m_files = {{s_androidPath, encodePng(sized)}};
+            icon.m_preview = std::move(sized);
             return icon;
         }
 
@@ -217,6 +229,8 @@ namespace fried::core
                 return path + " a " + size + " BMP of " + std::to_string(icon.m_colorCount) + " colors";
             case Platform::Cg50:
                 return path + " a " + size + " PNG, with " + s_cg50SelectedPath + " its selected twin";
+            case Platform::Android:
+                return path + " a " + size + " PNG";
             default:
                 return path + " " + size + " truecolor";
             }
@@ -237,6 +251,8 @@ namespace fried::core
             return {s_nintendoDsPath};
         case Platform::Cg50:
             return {s_cg50Path, s_cg50SelectedPath};
+        case Platform::Android:
+            return {s_androidPath};
         case Platform::Web:
             return {};
         default:
@@ -265,6 +281,9 @@ namespace fried::core
                 break;
             case Platform::Cg50:
                 icon = forCg50(source, notes);
+                break;
+            case Platform::Android:
+                icon = forAndroid(source, notes);
                 break;
             case Platform::Web:
                 break;

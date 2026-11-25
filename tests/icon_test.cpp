@@ -84,6 +84,7 @@ TEST_CASE("every platform keeps its icon where its build looks for it")
     CHECK(Icon::paths(Platform::Nintendo3ds) == std::vector<std::string>{"3ds/icon.png"});
     CHECK(Icon::paths(Platform::NintendoDs) == std::vector<std::string>{"nds/icon.bmp"});
     CHECK(Icon::paths(Platform::Cg50) == std::vector<std::string>{"cg50/icon-uns.png", "cg50/icon-sel.png"});
+    CHECK(Icon::paths(Platform::Android) == std::vector<std::string>{"android/icon.png"});
     CHECK(Icon::paths(Platform::Web).empty());
 }
 
@@ -298,4 +299,15 @@ TEST_CASE("an image is read from a file and shrunk into another")
     directory.write("notes.txt", "not an image");
     CHECK(readImage(directory.path() + "/notes.txt", &error).isNull());
     CHECK(error.find("notes.txt could not be read as an image") == 0);
+}
+
+TEST_CASE("an Android icon is a 192 pixel square PNG")
+{
+    std::vector<std::string> notes;
+    RenderedIcon icon = Icon::render(Platform::Android, gradient(600, 400), &notes);
+    REQUIRE(icon.m_files.size() == 1);
+    CHECK(icon.m_files.front().m_path == "android/icon.png");
+    Image written = decodeImage(icon.m_files.front().m_bytes);
+    CHECK(written.m_width == 192);
+    CHECK(written.m_height == 192);
 }
