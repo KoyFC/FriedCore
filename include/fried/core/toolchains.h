@@ -29,6 +29,9 @@ namespace fried::core
         std::string m_androidSdk;
         std::string m_javaHome;
 
+        // The adb that installs a build on a phone: the SDK's, or the one on the PATH. Empty when there is none, which only means a build cannot be installed.
+        std::string m_adb;
+
         // On Windows, the CMake that drives Visual Studio's C++ tools, and the folder of a w64devkit with CMake, Ninja and g++ in it. Visual Studio is preferred when both are there.
         std::string m_visualStudioCmake;
         std::string m_w64devkit;

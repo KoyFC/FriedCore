@@ -5,6 +5,7 @@
 #include <cctype>
 #include <filesystem>
 #include <regex>
+#include <sstream>
 #include <system_error>
 #include <vector>
 
@@ -150,5 +151,80 @@ namespace fried::core::android
             joined += (joined.empty() ? "" : ".") + each;
         }
         return joined;
+    }
+
+    std::string adbIn(const std::string &sdk)
+    {
+        if (sdk.empty())
+        {
+            return std::string();
+        }
+        for (const char *name : {"adb", "adb.exe"})
+        {
+            fs::path candidate = pathOf(sdk) / "platform-tools" / name;
+            if (isFileAt(candidate))
+            {
+                return textOf(candidate);
+            }
+        }
+        return std::string();
+    }
+
+    std::vector<Device> parseDevices(const std::string &output)
+    {
+        std::vector<Device> devices;
+        std::istringstream lines(output);
+        std::string line;
+        while (std::getline(lines, line))
+        {
+            if (!line.empty() && line.back() == '\r')
+            {
+                line.pop_back();
+            }
+            // The header, and the notes the daemon prints while it starts.
+            if (line.empty() || line[0] == '*' || line.rfind("List of devices", 0) == 0)
+            {
+                continue;
+            }
+            std::size_t split = line.find_first_of(" \t");
+            if (split == std::string::npos)
+            {
+                continue;
+            }
+            std::size_t stateStart = line.find_first_not_of(" \t", split);
+            if (stateStart == std::string::npos)
+            {
+                continue;
+            }
+            std::size_t stateEnd = line.find_first_of(" \t", stateStart);
+            devices.push_back({line.substr(0, split), line.substr(stateStart, stateEnd == std::string::npos ? std::string::npos : stateEnd - stateStart)});
+        }
+        return devices;
+    }
+
+    std::string findApk(const std::string &buildDirectory)
+    {
+        std::error_code ignored;
+        std::string newest;
+        fs::file_time_type newestTime{};
+        for (const fs::directory_entry &entry : fs::directory_iterator(pathOf(buildDirectory), ignored))
+        {
+            if (entry.path().extension() != ".apk" || !entry.is_regular_file(ignored))
+            {
+                continue;
+            }
+            fs::file_time_type time = entry.last_write_time(ignored);
+            if (newest.empty() || time > newestTime)
+            {
+                newest = textOf(entry.path());
+                newestTime = time;
+            }
+        }
+        return newest;
+    }
+
+    std::string packageOf(const std::string &declared, const std::string &organization, const std::string &name)
+    {
+        return declared.empty() ? defaultPackage(organization, name) : declared;
     }
 }

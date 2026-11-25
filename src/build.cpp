@@ -372,6 +372,37 @@ namespace fried::core
         return "Ready";
     }
 
+    std::vector<BuildStep> Build::androidInstallSteps(const std::string &apk, const std::string &package, const std::string &serial,
+                                                      const Toolchains &toolchains, std::string *error)
+    {
+        if (toolchains.m_adb.empty())
+        {
+            *error = "There is no adb, so there is no way to install on a device. It comes with the Android SDK's platform-tools.";
+            return {};
+        }
+        if (apk.empty() || package.empty())
+        {
+            *error = "There is no APK to install: build the game for Android first.";
+            return {};
+        }
+
+        std::vector<std::string> adb = {toolchains.m_adb};
+        if (!serial.empty())
+        {
+            adb.push_back("-s");
+            adb.push_back(serial);
+        }
+
+        BuildStep install;
+        install.m_arguments = adb;
+        install.m_arguments.insert(install.m_arguments.end(), {"install", "-r", apk});
+
+        BuildStep launch;
+        launch.m_arguments = adb;
+        launch.m_arguments.insert(launch.m_arguments.end(), {"shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1"});
+        return {install, launch};
+    }
+
     std::string Build::commandLine(const BuildStep &step)
     {
         std::string line;

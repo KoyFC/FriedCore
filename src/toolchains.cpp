@@ -172,6 +172,12 @@ namespace fried::core
             }
         }
 
+        toolchains.m_adb = android::adbIn(toolchains.m_androidSdk);
+        if (toolchains.m_adb.empty())
+        {
+            toolchains.m_adb = findExecutable("adb");
+        }
+
         if (!managed.m_w64devkit.empty() && hasAllOf(managed.m_w64devkit, {"cmake", "ninja", "g++"}))
         {
             toolchains.m_w64devkit = managed.m_w64devkit;

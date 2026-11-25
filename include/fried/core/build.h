@@ -57,6 +57,10 @@ namespace fried::core
         // "Ready", or why the target cannot be built yet.
         static std::string status(BuildTarget target, const std::string &projectDirectory, const Toolchains &toolchains);
 
+        // Installs an APK on a device and starts it: adb install -r, then the launcher activity through monkey, which needs no activity name. Empty without an adb, with the reason in error. A serial of "" leaves the device to adb, which is right with one connected.
+        static std::vector<BuildStep> androidInstallSteps(const std::string &apk, const std::string &package, const std::string &serial,
+                                                          const Toolchains &toolchains, std::string *error);
+
         // A step the way a shell takes it, so it can be pasted there.
         static std::string commandLine(const BuildStep &step);
     };

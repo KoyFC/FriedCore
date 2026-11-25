@@ -355,3 +355,21 @@ TEST_CASE("the Android build configures with the NDK's toolchain, or asks for th
     toolchains.m_host = HostSystem::Windows;
     CHECK(Build::steps(BuildTarget::Android, BuildType::Debug, false, "/project", "build/android", toolchains, &error).empty());
 }
+
+TEST_CASE("an APK is installed with adb and then started, on the device chosen")
+{
+    Toolchains toolchains = linuxMachine();
+    std::string error;
+    CHECK(Build::androidInstallSteps("/b/game.apk", "com.example.game", "", toolchains, &error).empty());
+    CHECK_FALSE(error.empty());
+
+    toolchains.m_adb = "/sdk/platform-tools/adb";
+    std::vector<BuildStep> steps = Build::androidInstallSteps("/b/game.apk", "com.example.game", "R58M", toolchains, &error);
+    REQUIRE(steps.size() == 2);
+    CHECK(steps[0].m_arguments == std::vector<std::string>{"/sdk/platform-tools/adb", "-s", "R58M", "install", "-r", "/b/game.apk"});
+    CHECK(steps[1].m_arguments ==
+          std::vector<std::string>{"/sdk/platform-tools/adb", "-s", "R58M", "shell", "monkey", "-p", "com.example.game", "-c", "android.intent.category.LAUNCHER", "1"});
+
+    steps = Build::androidInstallSteps("/b/game.apk", "com.example.game", "", toolchains, &error);
+    CHECK(steps[0].m_arguments == std::vector<std::string>{"/sdk/platform-tools/adb", "install", "-r", "/b/game.apk"});
+}

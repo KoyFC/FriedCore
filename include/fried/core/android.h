@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace fried::core::android
 {
@@ -17,6 +18,26 @@ namespace fried::core::android
     bool isSdk(const std::string &sdk);
     // Holds bin/java, bin/javac, bin/jar and bin/keytool.
     bool isJdk(const std::string &home);
+
+    // The adb of an SDK's platform-tools, which installs a build on a phone. Empty when the SDK has none.
+    std::string adbIn(const std::string &sdk);
+
+    // A device `adb devices` listed. Only the state "device" is ready to install on: "unauthorized" waits for the phone's screen to be tapped, and "offline" for the cable.
+    struct Device
+    {
+        std::string m_serial;
+        std::string m_state;
+        bool isReady() const { return m_state == "device"; }
+    };
+
+    // Reads what `adb devices` printed, one device per line after its header, the way a shell would show it.
+    std::vector<Device> parseDevices(const std::string &output);
+
+    // The newest .apk straight inside a build folder, or empty. The target's name is the project's, so the folder is what is known.
+    std::string findApk(const std::string &buildDirectory);
+
+    // The package a project is installed as: what it declares, or the one defaultPackage() makes.
+    std::string packageOf(const std::string &declared, const std::string &organization, const std::string &name);
 
     // Where the Project Manager unpacks each, inside its tools folder.
     std::string managedSdkDirectory(const std::string &tools);
