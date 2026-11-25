@@ -1,5 +1,6 @@
 add_executable(fried_core_tests
     main.cpp
+    android_test.cpp
     asset_check_test.cpp
     build_target_test.cpp
     build_test.cpp

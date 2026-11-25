@@ -13,7 +13,7 @@ TEST_CASE("every platform has the key the engine's build gives it")
     {
         keys.push_back(platformKey(platform));
     }
-    CHECK(keys == std::vector<std::string>{"pc", "vita", "switch", "3ds", "nds", "cg50", "web"});
+    CHECK(keys == std::vector<std::string>{"pc", "vita", "switch", "3ds", "nds", "cg50", "android", "web"});
 }
 
 TEST_CASE("Windows is a target of its own only away from Windows")
@@ -30,8 +30,10 @@ TEST_CASE("Windows is a target of its own only away from Windows")
 TEST_CASE("a build target names the platform its game runs on")
 {
     CHECK(platformOf(BuildTarget::WindowsFromHost) == Platform::Pc);
+    CHECK(platformOf(BuildTarget::Android) == Platform::Android);
     CHECK(platformOf(BuildTarget::Web) == Platform::Web);
     CHECK(buildTargetKey(BuildTarget::WindowsFromHost) == "windows");
+    CHECK(buildTargetKey(BuildTarget::Android) == "android");
     CHECK(buildTargetKey(BuildTarget::Web) == "web");
     CHECK(buildTargetKey(BuildTarget::NintendoDs) == "nds");
 

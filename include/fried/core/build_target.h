@@ -17,6 +17,7 @@ namespace fried::core
         Nintendo3ds,
         NintendoDs,
         Cg50,
+        Android,
         Web
     };
 
@@ -25,11 +26,12 @@ namespace fried::core
     {
         if (host == HostSystem::Windows)
         {
-            return {BuildTarget::Pc,         BuildTarget::Vita, BuildTarget::Switch, BuildTarget::Nintendo3ds,
-                    BuildTarget::NintendoDs, BuildTarget::Cg50, BuildTarget::Web};
+            return {BuildTarget::Pc,         BuildTarget::Vita, BuildTarget::Switch,  BuildTarget::Nintendo3ds,
+                    BuildTarget::NintendoDs, BuildTarget::Cg50, BuildTarget::Android, BuildTarget::Web};
         }
         return {BuildTarget::Pc,          BuildTarget::WindowsFromHost, BuildTarget::Vita, BuildTarget::Switch,
-                BuildTarget::Nintendo3ds, BuildTarget::NintendoDs,      BuildTarget::Cg50, BuildTarget::Web};
+                BuildTarget::Nintendo3ds, BuildTarget::NintendoDs,      BuildTarget::Cg50, BuildTarget::Android,
+                BuildTarget::Web};
     }
 
     inline Platform platformOf(BuildTarget target)
@@ -46,6 +48,8 @@ namespace fried::core
             return Platform::NintendoDs;
         case BuildTarget::Cg50:
             return Platform::Cg50;
+        case BuildTarget::Android:
+            return Platform::Android;
         case BuildTarget::Web:
             return Platform::Web;
         default:

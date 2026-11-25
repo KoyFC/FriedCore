@@ -5,6 +5,7 @@
 
 namespace fried::core
 {
+    // The Project Manager has a page for each platform before Web, indexed by this order, so Web stays last.
     enum class Platform
     {
         Pc,
@@ -13,11 +14,12 @@ namespace fried::core
         Nintendo3ds,
         NintendoDs,
         Cg50,
+        Android,
         Web
     };
 
-    inline constexpr std::array<Platform, 7> s_platforms = {
-        Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds, Platform::NintendoDs, Platform::Cg50, Platform::Web};
+    inline constexpr std::array<Platform, 8> s_platforms = {
+        Platform::Pc, Platform::Vita, Platform::Switch, Platform::Nintendo3ds, Platform::NintendoDs, Platform::Cg50, Platform::Android, Platform::Web};
 
     // The name the engine gives the platform, which is also its section of project.fried.
     inline std::string platformKey(Platform platform)
@@ -34,6 +36,8 @@ namespace fried::core
             return "nds";
         case Platform::Cg50:
             return "cg50";
+        case Platform::Android:
+            return "android";
         case Platform::Web:
             return "web";
         default:
@@ -55,6 +59,8 @@ namespace fried::core
             return "Nintendo DS";
         case Platform::Cg50:
             return "Casio fx-CG50";
+        case Platform::Android:
+            return "Android";
         case Platform::Web:
             return "Web";
         default:
