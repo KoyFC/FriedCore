@@ -23,6 +23,7 @@ add_library(fried_core STATIC
     src/line_kind.cpp
     src/project.cpp
     src/stb.cpp
+    src/yaml.cpp
     src/toolchains.cpp
 )
 
