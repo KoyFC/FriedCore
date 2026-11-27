@@ -972,7 +972,7 @@ namespace fried::core
             }
 
             // The value after "key:" or "-", on the same line when it is short and flat, and under it otherwise.
-            void value(const Json &item, int indent, const std::string &lead, bool isList)
+            void value(const Json &item, int indent, const std::string &lead, bool isList, bool forceBlock = false)
             {
                 if (item.is_object() || item.is_array())
                 {
@@ -981,7 +981,7 @@ namespace fried::core
                         m_out += lead + (item.is_object() ? " {}" : " []") + "\n";
                         return;
                     }
-                    if (canFlow(item))
+                    if (!forceBlock && canFlow(item))
                     {
                         std::string inlineForm = flow(item, m_layout);
                         if (lead.size() + 1 + inlineForm.size() <= 80)
@@ -1012,7 +1012,7 @@ namespace fried::core
                     std::string pad = first && !firstPrefix.empty() ? firstPrefix : std::string((size_t)indent, ' ');
                     int column = first && !firstPrefix.empty() ? indent : indent;
                     first = false;
-                    value(object[key], column, pad + text(key, false) + ":", false);
+                    value(object[key], column, pad + text(key, false) + ":", false, isRoot && m_layout == YamlLayout::Plain && object[key].is_object());
                 }
             }
 

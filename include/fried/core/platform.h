@@ -119,6 +119,18 @@ namespace fried::core
         return platform != Platform::Cg50;
     }
 
+    // Whether a build favors speed, which leaves the compiler's flags as they are, or size, which builds for size and drops what nothing uses at link time.
+    enum class Optimize
+    {
+        Speed,
+        Size
+    };
+
+    inline std::string optimizeKey(Optimize optimize)
+    {
+        return optimize == Optimize::Size ? "size" : "speed";
+    }
+
     inline std::string precisionKey(Precision precision)
     {
         return precision == Precision::Single ? "single" : "double";

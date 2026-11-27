@@ -1,6 +1,7 @@
 #include "doctest/doctest.h"
 
 #include "fried/core/project.h"
+#include "fried/core/yaml.h"
 #include "temporary_directory.h"
 
 #include <vector>
@@ -10,6 +11,15 @@ using namespace fried::core;
 namespace
 {
     const std::string s_data = FRIED_CORE_TEST_DATA;
+
+    // The project as the JSON it was once written in, which keeps the expectations about what is in the file apart from how it is written.
+    std::string asJson(const Project &project)
+    {
+        fried::core::Json value;
+        std::string error;
+        REQUIRE(fried::core::parseYaml(project.text(), &value, &error));
+        return value.dump(1, '\t') + "\n";
+    }
 
     Project parsed(const std::string &text)
     {
@@ -59,9 +69,9 @@ TEST_CASE("a file that is not a project is refused with a reason")
     Project project;
     std::string error;
     CHECK_FALSE(project.parse("/games/sample", "[1, 2]", &error));
-    CHECK(error == "project.fried must hold a JSON object.");
+    CHECK(error == "project.fried must hold a map of keys and values.");
     CHECK_FALSE(project.parse("/games/sample", "{\"name\": ", &error));
-    CHECK(error.find("not valid JSON") != std::string::npos);
+    CHECK(error.find("not valid YAML") != std::string::npos);
     CHECK_FALSE(project.load("/nonexistent-directory", &error));
     CHECK(error.find("not a Fried project") != std::string::npos);
 }
@@ -85,7 +95,7 @@ TEST_CASE("saving keeps the keys the model does not know")
     REQUIRE(project.save(&error));
 
     CHECK(directory.read("project.fried") ==
-          "{\n\t\"gameClass\": \"Main\",\n\t\"name\": \"New\",\n\t\"switch\": {\n\t\t\"custom\": 3\n\t},\n\t\"vita\": {\n\t\t\"titleId\": \"FRIE00002\"\n\t}\n}\n");
+          "gameClass: Main\nname: New\nswitch:\n  custom: 3\nvita:\n  titleId: FRIE00002\n");
     CHECK_FALSE(std::filesystem::exists(directory.path() + "/project.fried.tmp"));
 }
 
@@ -106,10 +116,10 @@ TEST_CASE("an emptied value removes its key, and its section with the last key")
     project.setWindowTitle("");
     project.setPackagingText("nds", "subtitle1", "");
     project.setStartScene("");
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"subtitle2\": \"b\"\n\t}\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"subtitle2\": \"b\"\n\t}\n}\n");
 
     project.setPackagingText("nds", "subtitle2", "");
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 }
 
 TEST_CASE("the display is written without a size in the default mode and left alone when unchanged")
@@ -120,14 +130,14 @@ TEST_CASE("the display is written without a size in the default mode and left al
     CHECK(project.text() == before);
 
     project.setDisplay(DisplaySettings{"default", 640, 480, "linear"});
-    CHECK(project.text() == "{\n\t\"display\": {\n\t\t\"filter\": \"linear\",\n\t\t\"mode\": \"default\"\n\t}\n}\n");
+    CHECK(asJson(project) == "{\n\t\"display\": {\n\t\t\"filter\": \"linear\",\n\t\t\"mode\": \"default\"\n\t}\n}\n");
 }
 
 TEST_CASE("a platform's own display is dropped, and its section with it when nothing else is there")
 {
     Project project = parsed(R"({"switch": {"display": {"filter": "nearest"}}, "vita": {"display": {"filter": "nearest"}, "titleId": "FRIE00001"}})");
     project.dropPlatformDisplays();
-    CHECK(project.text() == "{\n\t\"vita\": {\n\t\t\"titleId\": \"FRIE00001\"\n\t}\n}\n");
+    CHECK(asJson(project) == "{\n\t\"vita\": {\n\t\t\"titleId\": \"FRIE00001\"\n\t}\n}\n");
 }
 
 TEST_CASE("identity, version and title id are checked the way packaging needs them")
@@ -190,11 +200,11 @@ TEST_CASE("vsync is on unless the project turns it off, and only an off is writt
 
     project.setVsync(false);
     CHECK_FALSE(project.vsync());
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"vsync\": false\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"vsync\": false\n}\n");
 
     project.setVsync(true);
     CHECK(project.vsync());
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     CHECK(parsed(R"({"vsync": "no"})").vsync());
 }
@@ -211,15 +221,15 @@ TEST_CASE("the precision is single on the DS and double elsewhere, and only anot
     project.setPrecision(Platform::NintendoDs, Precision::Double);
     CHECK(project.precision(Platform::NintendoDs) == Precision::Double);
     CHECK(project.precision(Platform::Pc) == Precision::Double);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"precision\": \"double\"\n\t}\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"precision\": \"double\"\n\t}\n}\n");
 
     project.setPrecision(Platform::NintendoDs, Precision::Single);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     project.setPrecision(Platform::Nintendo3ds, Precision::Single);
     CHECK(project.precision(Platform::Nintendo3ds) == Precision::Single);
     project.setPrecision(Platform::Nintendo3ds, Precision::Double);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     CHECK(parsed(R"({"nds": {"precision": "quad"}})").precision(Platform::NintendoDs) == Precision::Single);
     CHECK(parsed(R"({"pc": {"precision": 32}})").precision(Platform::Pc) == Precision::Double);
@@ -233,15 +243,15 @@ TEST_CASE("the physics rate is 60 unless the project gives another")
 
     project.setPhysicsRate(30);
     CHECK(project.physicsRate() == 30);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"physicsRate\": 30\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"physicsRate\": 30\n}\n");
 
     project.setPhysicsRate(60);
     CHECK(project.physicsRate() == 60);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     project.setPhysicsRate(30);
     project.setPhysicsRate(0);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     CHECK(parsed(R"({"physicsRate": -5})").physicsRate() == 60);
     CHECK(parsed(R"({"physicsRate": 0})").physicsRate() == 60);
@@ -256,10 +266,10 @@ TEST_CASE("the default target framerate is no limit unless the project gives one
 
     project.setDefaultTargetFramerate(144);
     CHECK(project.defaultTargetFramerate() == 144);
-    CHECK(project.text() == "{\n\t\"defaultTargetFramerate\": 144,\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"defaultTargetFramerate\": 144,\n\t\"name\": \"Sample\"\n}\n");
 
     project.setDefaultTargetFramerate(0);
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     CHECK(parsed(R"({"defaultTargetFramerate": -5})").defaultTargetFramerate() == 0);
     CHECK(parsed(R"({"defaultTargetFramerate": "fast"})").defaultTargetFramerate() == 0);
@@ -279,14 +289,14 @@ TEST_CASE("a project declares no platforms unless it says so, which is every one
     CHECK(project.declares(Platform::Pc));
     CHECK(project.declares(Platform::NintendoDs));
     CHECK_FALSE(project.declares(Platform::Vita));
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\",\n\t\"platforms\": [\n\t\t\"pc\",\n\t\t\"nds\"\n\t]\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"platforms\": [\n\t\t\"pc\",\n\t\t\"nds\"\n\t]\n}\n");
 
     project.setDeclaredPlatforms({});
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     project.setDeclaredPlatforms({Platform::Cg50});
     project.setDeclaredPlatforms(std::vector<Platform>(fried::core::s_platforms.begin(), fried::core::s_platforms.end()));
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 
     CHECK(parsed(R"({"platforms": ["web", "gamecube"]})").declaredPlatforms() == std::vector<Platform>{Platform::Web});
     CHECK(parsed(R"({"platforms": "pc"})").declaredPlatforms().empty());
@@ -298,10 +308,10 @@ TEST_CASE("the autoloads are read in order and an empty list removes the key")
     CHECK(project.autoloads() == std::vector<std::string>({"shell", "music"}));
 
     project.setAutoloads({"music"});
-    CHECK(project.text() == "{\n\t\"autoload\": [\n\t\t\"music\"\n\t],\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"autoload\": [\n\t\t\"music\"\n\t],\n\t\"name\": \"Sample\"\n}\n");
 
     project.setAutoloads({});
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 }
 
 TEST_CASE("the input block is kept whole, and an empty one removes the key")
@@ -314,5 +324,32 @@ TEST_CASE("the input block is kept whole, and an empty one removes the key")
 
     project.setInputBlock({{"maps", nlohmann::json::array()}});
     CHECK(project.inputBlock().empty());
-    CHECK(project.text() == "{\n\t\"name\": \"Sample\"\n}\n");
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
+}
+
+TEST_CASE("how a platform is optimized is speed until its section says size, and only a size is written")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK(project.optimize(Platform::Pc) == Optimize::Speed);
+    project.setOptimize(Platform::NintendoDs, Optimize::Size);
+    CHECK(project.optimize(Platform::NintendoDs) == Optimize::Size);
+    CHECK(project.optimize(Platform::Pc) == Optimize::Speed);
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"optimize\": \"size\"\n\t}\n}\n");
+    project.setOptimize(Platform::NintendoDs, Optimize::Speed);
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
+}
+
+TEST_CASE("link time optimization and the packed executable are off until turned on")
+{
+    Project project = parsed(R"({"name": "Sample"})");
+    CHECK_FALSE(project.lto(Platform::Pc));
+    CHECK_FALSE(project.compressExecutable());
+    project.setLto(Platform::Pc, true);
+    project.setCompressExecutable(true);
+    CHECK(project.lto(Platform::Pc));
+    CHECK(project.compressExecutable());
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"pc\": {\n\t\t\"compressExecutable\": true,\n\t\t\"lto\": true\n\t}\n}\n");
+    project.setLto(Platform::Pc, false);
+    project.setCompressExecutable(false);
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 }

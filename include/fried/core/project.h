@@ -86,6 +86,12 @@ namespace fried::core
         static constexpr int s_defaultPhysicsRate = 60;
         // How wide the numbers of the game's Haxe code are on the platform, which is the "precision" of its section: "single" makes Haxe's Float a 32-bit float and "double" leaves it a 64-bit double. The DS has no floating point unit and defaults to single, every other platform to double, and a missing or unknown value is the default.
         Precision precision(Platform platform) const;
+        // How the platform's build is optimized: speed unless its section says size. Only a size is written.
+        Optimize optimize(Platform platform) const;
+        // Whether the build for the platform is linked with link time optimization, which is off unless its section turns it on.
+        bool lto(Platform platform) const;
+        // Whether the computer's executable is packed with UPX once it is built, which is off unless the pc section turns it on.
+        bool compressExecutable() const;
         // The platforms the project declares, which the engine refuses to build for any other. Empty when it declares none, which is every platform.
         std::vector<Platform> declaredPlatforms() const;
         // Whether the engine builds the project for the platform: true for all of them when none is declared.
@@ -114,6 +120,11 @@ namespace fried::core
         void setPrecision(Platform platform, Precision value);
         // Declaring every platform is declaring none, so that leaves no key behind. An empty list is not written either, since the engine refuses it.
         void setDeclaredPlatforms(const std::vector<Platform> &platforms);
+        void setOptimize(Platform platform, Optimize value);
+        // Only a link time optimization turned on is written.
+        void setLto(Platform platform, bool value);
+        // Only a compression turned on is written.
+        void setCompressExecutable(bool value);
         // A display of a platform's own is no longer read by the engine, which refuses to build with one.
         void dropPlatformDisplays();
 

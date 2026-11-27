@@ -1,4 +1,5 @@
 #include "fried/core/project.h"
+#include "fried/core/yaml.h"
 #include "paths.h"
 
 #include <algorithm>
@@ -68,6 +69,31 @@ namespace fried::core
         {
             Json section = sectionOf(root, key);
             assign(section, subKey, value);
+            assignSection(root, key, section);
+        }
+
+        bool flagOf(const Json &root, const std::string &key, const std::string &subKey)
+        {
+            auto section = root.find(key);
+            if (section == root.end() || !section->is_object())
+            {
+                return false;
+            }
+            auto found = section->find(subKey);
+            return found != section->end() && found->is_boolean() && found->get<bool>();
+        }
+
+        void assignFlag(Json &root, const std::string &key, const std::string &subKey, bool value)
+        {
+            Json section = sectionOf(root, key);
+            if (value)
+            {
+                section[subKey] = true;
+            }
+            else
+            {
+                section.erase(subKey);
+            }
             assignSection(root, key, section);
         }
 
@@ -162,19 +188,16 @@ namespace fried::core
     bool Project::parse(const std::string &directory, const std::string &text, std::string *error)
     {
         Json root;
-        try
+        std::string problem;
+        if (!parseYaml(text, &root, &problem))
         {
-            root = Json::parse(text);
-        }
-        catch (const Json::parse_error &problem)
-        {
-            *error = std::string(s_fileName) + " is not valid JSON: " + problem.what();
+            *error = std::string(s_fileName) + " is not valid YAML: " + problem;
             return false;
         }
 
         if (!root.is_object())
         {
-            *error = std::string(s_fileName) + " must hold a JSON object.";
+            *error = std::string(s_fileName) + " must hold a map of keys and values.";
             return false;
         }
 
@@ -185,7 +208,7 @@ namespace fried::core
 
     std::string Project::text() const
     {
-        return m_root.dump(1, '\t') + "\n";
+        return emitYaml(m_root, YamlLayout::Plain);
     }
 
     // Written beside the file and moved over it, so a failed write leaves the project as it was.
@@ -502,6 +525,36 @@ namespace fried::core
     void Project::setPrecision(Platform platform, Precision value)
     {
         assignNested(m_root, platformKey(platform), "precision", value == defaultPrecision(platform) ? std::string() : precisionKey(value));
+    }
+
+    Optimize Project::optimize(Platform platform) const
+    {
+        return nested(m_root, platformKey(platform), "optimize") == optimizeKey(Optimize::Size) ? Optimize::Size : Optimize::Speed;
+    }
+
+    void Project::setOptimize(Platform platform, Optimize value)
+    {
+        assignNested(m_root, platformKey(platform), "optimize", value == Optimize::Speed ? std::string() : optimizeKey(value));
+    }
+
+    bool Project::lto(Platform platform) const
+    {
+        return flagOf(m_root, platformKey(platform), "lto");
+    }
+
+    void Project::setLto(Platform platform, bool value)
+    {
+        assignFlag(m_root, platformKey(platform), "lto", value);
+    }
+
+    bool Project::compressExecutable() const
+    {
+        return flagOf(m_root, platformKey(Platform::Pc), "compressExecutable");
+    }
+
+    void Project::setCompressExecutable(bool value)
+    {
+        assignFlag(m_root, platformKey(Platform::Pc), "compressExecutable", value);
     }
 
     bool Project::declares(Platform platform) const
