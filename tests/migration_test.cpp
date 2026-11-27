@@ -112,3 +112,10 @@ TEST_CASE("a scene that already has a YAML file and a file that is not valid are
     CHECK(fs::exists(fs::path(directory.path()) / "assets/scenes/a.scene.json"));
     CHECK(fs::exists(fs::path(directory.path()) / "assets/scenes/b.scene.json"));
 }
+
+TEST_CASE("a scene keeps the format of the file it is saved to")
+{
+    Json data = Json::parse(R"({"version": 2, "name": "S", "nodes": []})");
+    CHECK(sceneText("a/main.scene.json", data).front() == '{');
+    CHECK(sceneText("a/main.scene.yaml", data) == "version: 2\nname: S\nnodes: []\n");
+}

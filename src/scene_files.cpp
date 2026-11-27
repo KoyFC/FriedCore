@@ -30,6 +30,15 @@ namespace fried::core
         return std::string();
     }
 
+    std::string sceneText(const std::string &path, const Json &data)
+    {
+        if (endsWith(path, s_legacySceneSuffix))
+        {
+            return data.dump(1, '\t') + "\n";
+        }
+        return emitYaml(data, YamlLayout::Scene);
+    }
+
     std::string scenePath(const Project &project, const std::string &name)
     {
         std::string yaml = project.scenesDirectory() + "/" + name + s_sceneSuffix;
