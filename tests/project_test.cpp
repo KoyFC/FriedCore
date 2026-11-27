@@ -327,15 +327,18 @@ TEST_CASE("the input block is kept whole, and an empty one removes the key")
     CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 }
 
-TEST_CASE("how a platform is optimized is speed until its section says size, and only a size is written")
+TEST_CASE("how a platform is optimized is its default until its section says otherwise, and only another value is written")
 {
     Project project = parsed(R"({"name": "Sample"})");
     CHECK(project.optimize(Platform::Pc) == Optimize::Speed);
-    project.setOptimize(Platform::NintendoDs, Optimize::Size);
     CHECK(project.optimize(Platform::NintendoDs) == Optimize::Size);
-    CHECK(project.optimize(Platform::Pc) == Optimize::Speed);
-    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"optimize\": \"size\"\n\t}\n}\n");
+    project.setOptimize(Platform::Pc, Optimize::Size);
     project.setOptimize(Platform::NintendoDs, Optimize::Speed);
+    CHECK(project.optimize(Platform::Pc) == Optimize::Size);
+    CHECK(project.optimize(Platform::NintendoDs) == Optimize::Speed);
+    CHECK(asJson(project) == "{\n\t\"name\": \"Sample\",\n\t\"nds\": {\n\t\t\"optimize\": \"speed\"\n\t},\n\t\"pc\": {\n\t\t\"optimize\": \"size\"\n\t}\n}\n");
+    project.setOptimize(Platform::Pc, Optimize::Speed);
+    project.setOptimize(Platform::NintendoDs, Optimize::Size);
     CHECK(asJson(project) == "{\n\t\"name\": \"Sample\"\n}\n");
 }
 

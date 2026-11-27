@@ -126,6 +126,12 @@ namespace fried::core
         Size
     };
 
+    // What a platform builds with when its section does not say: size on the DS, whose main memory the engine's code does not fit otherwise, and speed elsewhere.
+    inline Optimize defaultOptimize(Platform platform)
+    {
+        return platform == Platform::NintendoDs ? Optimize::Size : Optimize::Speed;
+    }
+
     inline std::string optimizeKey(Optimize optimize)
     {
         return optimize == Optimize::Size ? "size" : "speed";

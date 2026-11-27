@@ -529,12 +529,17 @@ namespace fried::core
 
     Optimize Project::optimize(Platform platform) const
     {
-        return nested(m_root, platformKey(platform), "optimize") == optimizeKey(Optimize::Size) ? Optimize::Size : Optimize::Speed;
+        std::string value = nested(m_root, platformKey(platform), "optimize");
+        if (value == optimizeKey(Optimize::Size))
+        {
+            return Optimize::Size;
+        }
+        return value == optimizeKey(Optimize::Speed) ? Optimize::Speed : defaultOptimize(platform);
     }
 
     void Project::setOptimize(Platform platform, Optimize value)
     {
-        assignNested(m_root, platformKey(platform), "optimize", value == Optimize::Speed ? std::string() : optimizeKey(value));
+        assignNested(m_root, platformKey(platform), "optimize", value == defaultOptimize(platform) ? std::string() : optimizeKey(value));
     }
 
     bool Project::lto(Platform platform) const
