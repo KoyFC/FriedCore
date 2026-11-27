@@ -21,7 +21,9 @@ add_library(fried_core STATIC
     src/icon.cpp
     src/image.cpp
     src/line_kind.cpp
+    src/migration.cpp
     src/project.cpp
+    src/scene_files.cpp
     src/stb.cpp
     src/yaml.cpp
     src/toolchains.cpp
@@ -44,6 +46,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
     endif()
+
+    add_executable(fried_migrate tools/fried_migrate.cpp)
+    target_link_libraries(fried_migrate PRIVATE fried_core)
 
     enable_testing()
     add_subdirectory(tests)
