@@ -903,22 +903,27 @@ namespace fried::core
             {
                 return keys;
             }
-            static const char *const s_root[] = {"version", "name", "camera", "nodes"};
-            static const char *const s_node[] = {"type", "id", "name", "instance"};
-            bool isNode = object.contains("type") || object.contains("id") || object.contains("instance");
-            if (isRoot && object.contains("nodes"))
+            static const char *const s_root[] = {"version", "name", "camera", "objects"};
+            static const char *const s_object[] = {"id", "name", "instance", "active", "transform", "components"};
+            bool isObject = object.contains("id") || object.contains("instance");
+            bool isTyped = !isObject && object.contains("type");
+            if (isRoot && object.contains("objects"))
             {
                 std::stable_sort(keys.begin(), keys.end(), [&](const std::string &a, const std::string &b) {
                     int ra = rank(a, s_root, 4), rb = rank(b, s_root, 4);
                     return (ra < 0 ? 99 : ra) < (rb < 0 ? 99 : rb);
                 });
             }
-            else if (isNode)
+            else if (isObject)
             {
                 std::stable_sort(keys.begin(), keys.end(), [&](const std::string &a, const std::string &b) {
-                    int ra = a == "children" ? 100 : rank(a, s_node, 4), rb = b == "children" ? 100 : rank(b, s_node, 4);
+                    int ra = a == "children" ? 100 : rank(a, s_object, 6), rb = b == "children" ? 100 : rank(b, s_object, 6);
                     return (ra < 0 ? 50 : ra) < (rb < 0 ? 50 : rb);
                 });
+            }
+            else if (isTyped)
+            {
+                std::stable_sort(keys.begin(), keys.end(), [&](const std::string &a, const std::string &b) { return a == "type" && b != "type"; });
             }
             else
             {
@@ -961,14 +966,14 @@ namespace fried::core
             }
 
         private:
-            // A scene's nodes are always written as blocks, since they are what a person reads and edits.
+            // A scene's objects are always written as blocks, since they are what a person reads and edits.
             bool canFlow(const Json &item) const
             {
                 if (!isLeafContainer(item))
                 {
                     return false;
                 }
-                return !(m_layout == YamlLayout::Scene && item.is_object() && (item.contains("type") || item.contains("id") || item.contains("instance")));
+                return !(m_layout == YamlLayout::Scene && item.is_object() && (item.contains("id") || item.contains("instance")));
             }
 
             // The value after "key:" or "-", on the same line when it is short and flat, and under it otherwise.

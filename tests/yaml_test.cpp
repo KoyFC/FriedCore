@@ -115,21 +115,24 @@ TEST_CASE("the scenes and the project of the engine's sandbox survive a round tr
 
 TEST_CASE("a scene is written with its keys in reading order and flat values in one line")
 {
-    Json scene = Json::parse(R"({"nodes":[{"children":[{"id":"b","type":"Camera","x":1,"name":"B"}],"z":2,"type":"Node2D","id":"a","color":{"g":2,"r":1}}],"name":"S","version":2,"camera":"b"})");
+    Json scene = Json::parse(R"({"objects":[{"children":[{"id":"b","name":"B","transform":{"x":1,"type":"Transform2D"},"components":[{"type":"Camera","zoom":2}]}],"id":"a","active":false,"components":[{"z":2,"type":"Label","color":{"g":2,"r":1}}]}],"name":"S","version":3,"camera":"b"})");
     CHECK(emitYaml(scene, YamlLayout::Scene) ==
-          "version: 2\n"
+          "version: 3\n"
           "name: S\n"
           "camera: b\n"
-          "nodes:\n"
-          "  - type: Node2D\n"
-          "    id: a\n"
-          "    color: {r: 1, g: 2}\n"
-          "    z: 2\n"
+          "objects:\n"
+          "  - id: a\n"
+          "    active: false\n"
+          "    components:\n"
+          "      - type: Label\n"
+          "        color: {r: 1, g: 2}\n"
+          "        z: 2\n"
           "    children:\n"
-          "      - type: Camera\n"
-          "        id: b\n"
+          "      - id: b\n"
           "        name: B\n"
-          "        x: 1\n");
+          "        transform: {type: Transform2D, x: 1}\n"
+          "        components:\n"
+          "          - {type: Camera, zoom: 2}\n");
 }
 
 TEST_CASE("text that would read as another kind of value is quoted")

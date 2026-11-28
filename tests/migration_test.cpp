@@ -115,7 +115,7 @@ TEST_CASE("a scene that already has a YAML file and a file that is not valid are
 
 TEST_CASE("a scene keeps the format of the file it is saved to")
 {
-    Json data = Json::parse(R"({"version": 2, "name": "S", "nodes": []})");
+    Json data = Json::parse(R"({"version": 3, "name": "S", "objects": []})");
     CHECK(sceneText("a/main.scene.json", data).front() == '{');
-    CHECK(sceneText("a/main.scene.yaml", data) == "version: 2\nname: S\nnodes: []\n");
+    CHECK(sceneText("a/main.scene.yaml", data) == "version: 3\nname: S\nobjects: []\n");
 }
